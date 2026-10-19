@@ -1,0 +1,529 @@
+---
+import { env } from 'cloudflare:workers';
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getProductById, listCategories, type Product } from '../../../lib/db';
+
+const isNew = Astro.params.id === 'nuevo';
+let product: Product | null = null;
+
+if (!isNew) {
+  product = await getProductById(env.DB, Number(Astro.params.id));
+  if (!product) return Astro.redirect('/admin');
+}
+
+const categories = await listCategories(env.DB);
+
+const initialData = {
+  id: product?.id ?? null,
+  slug: product?.slug ?? '',
+  images: product?.images ?? [],
+  variants: product?.variants ?? [{ id: null, colorName: 'Único', colorHex: '#25284a', imageKey: '', stock: 0 }],
+};
+---
+
+<AdminLayout title={isNew ? 'Nuevo producto' : product!.title}>
+  <a href="/admin" class="back">← Productos</a>
+  <h1>{isNew ? 'Nuevo producto' : 'Editar producto'}</h1>
+  {product && product.isActive && <p class="hint">Link para compartir: <a href={`/p/${product.slug}`} target="_blank">/p/{product.slug}</a></p>}
+
+  <form id="product-form" class="form" novalidate>
+    <section class="card">
+      <h2>Información básica</h2>
+      <label class="field">
+        Título
+        <input name="title" required maxlength="120" value={product?.title} placeholder="Ej: Audífonos Bluetooth deportivos" />
+      </label>
+      <label class="field">
+        Categoría
+        <select name="category" required>
+          <option value="" disabled selected={!product}>Elige una categoría</option>
+          {categories.map((category) => <option value={category.slug} selected={product?.category === category.slug}>{category.name}</option>)}
+        </select>
+      </label>
+      <div class="two">
+        <label class="field">
+          Precio (COP)
+          <input name="price" type="number" inputmode="numeric" min="1" step="1" required value={product?.price} placeholder="89000" />
+        </label>
+        <label class="field">
+          Precio anterior <span class="hint">(opcional, para mostrar oferta)</span>
+          <input name="compareAtPrice" type="number" inputmode="numeric" min="1" step="1" value={product?.compareAtPrice ?? ''} />
+        </label>
+      </div>
+      <label class="field">
+        Descripción corta
+        <input name="shortDescription" maxlength="300" value={product?.shortDescription} placeholder="Una línea que diga el beneficio principal" />
+      </label>
+      <div class="toggles">
+        <label><input type="checkbox" name="isActive" checked={product ? product.isActive : true} /> Visible en la tienda</label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>¿Dónde aparece en el inicio?</h2>
+      <p class="hint">Si le pones precio anterior, aparece automáticamente en "Ofertas".</p>
+      <div class="toggles">
+        <label><input type="checkbox" name="isFeatured" checked={product?.isFeatured} /> Destacados</label>
+        <label><input type="checkbox" name="isNew" checked={product?.isNew} /> Nuevos</label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Fotos</h2>
+      <p class="hint">La primera foto es la principal y la que se ve al compartir el link. Se comprimen automáticamente.</p>
+      <ul id="image-list" class="images"></ul>
+      <label class="btn btn-ghost btn-small upload">
+        + Subir fotos
+        <input id="image-input" type="file" accept="image/*" multiple class="visually-hidden" />
+      </label>
+      <p id="upload-status" class="hint" role="status"></p>
+    </section>
+
+    <section class="card">
+      <h2>Colores y stock</h2>
+      <p class="hint">Cada color tiene su propio stock. Si el producto no tiene colores, deja una sola fila llamada "Único".</p>
+      <div id="variant-list" class="variants"></div>
+      <button type="button" id="add-variant" class="btn btn-ghost btn-small">+ Agregar color</button>
+    </section>
+
+    <section class="card">
+      <h2>Información que genera confianza</h2>
+      <label class="field">
+        ¿Para qué sirve y cómo se usa?
+        <textarea name="howToUse" maxlength="3000" rows="5">{product?.howToUse}</textarea>
+      </label>
+      <label class="field">
+        Especificaciones y compatibilidad
+        <textarea name="specs" maxlength="3000" rows="4" placeholder="Batería: 20 h&#10;Compatible con: Android e iPhone">{product?.specs}</textarea>
+      </label>
+      <label class="field">
+        Garantía y respaldo
+        <textarea name="warranty" maxlength="1000" rows="2" placeholder="3 meses de garantía por defectos de fábrica">{product?.warranty}</textarea>
+      </label>
+      <label class="field">
+        Link del video <span class="hint">(TikTok o Instagram)</span>
+        <input name="videoUrl" type="url" maxlength="300" value={product?.videoUrl} placeholder="https://www.tiktok.com/@esencialescolomarilson/video/..." />
+      </label>
+      <label class="field">
+        Etiquetas <span class="hint">(separadas por coma, ayudan en la búsqueda)</span>
+        <input name="tags" maxlength="200" value={product?.tags.join(', ')} placeholder="deporte, hogar, belleza" />
+      </label>
+    </section>
+
+    <div id="form-errors" class="alert" hidden></div>
+
+    <div class="save-bar">
+      {!isNew && <button type="button" id="delete-product" class="btn btn-danger btn-small">Eliminar</button>}
+      <button type="submit" class="btn" id="save-button">Guardar producto</button>
+    </div>
+  </form>
+
+  <script type="application/json" id="initial-data" set:html={JSON.stringify(initialData)} />
+</AdminLayout>
+
+<script>
+  import { imageUrl } from '../../../lib/format';
+
+  interface VariantRow {
+    id: number | null;
+    colorName: string;
+    colorHex: string;
+    imageKey: string;
+    stock: number;
+  }
+
+  const MAX_IMAGE_SIDE = 1200;
+  const JPEG_QUALITY = 0.8;
+
+  const initial = JSON.parse(document.getElementById('initial-data')!.textContent!) as {
+    id: number | null;
+    images: string[];
+    variants: VariantRow[];
+  };
+
+  const form = document.getElementById('product-form') as HTMLFormElement;
+  const imageList = document.getElementById('image-list')!;
+  const imageInput = document.getElementById('image-input') as HTMLInputElement;
+  const uploadStatus = document.getElementById('upload-status')!;
+  const variantList = document.getElementById('variant-list')!;
+  const errorBox = document.getElementById('form-errors')!;
+  const saveButton = document.getElementById('save-button') as HTMLButtonElement;
+
+  let images = [...initial.images];
+
+  function escapeAttribute(text: string): string {
+    return text.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  }
+
+  function renderImages() {
+    imageList.innerHTML = images
+      .map(
+        (key, index) => `
+        <li>
+          <img src="${imageUrl(key)}" alt="Foto ${index + 1}" width="110" height="110" />
+          <span class="image-number">${index + 1}</span>
+          <div class="image-actions">
+            <button type="button" data-action="left" data-index="${index}" aria-label="Mover a la izquierda" ${index === 0 ? 'disabled' : ''}>←</button>
+            <button type="button" data-action="remove" data-index="${index}" aria-label="Quitar foto">✕</button>
+            <button type="button" data-action="right" data-index="${index}" aria-label="Mover a la derecha" ${index === images.length - 1 ? 'disabled' : ''}>→</button>
+          </div>
+        </li>`,
+      )
+      .join('');
+    refreshImageSelects();
+  }
+
+  function imageOptions(selectedKey: string): string {
+    const options = images.map(
+      (key, index) => `<option value="${key}" ${key === selectedKey ? 'selected' : ''}>Foto ${index + 1}</option>`,
+    );
+    return `<option value="">Sin foto propia</option>${options.join('')}`;
+  }
+
+  function refreshImageSelects() {
+    variantList.querySelectorAll<HTMLSelectElement>('select[name="imageKey"]').forEach((select) => {
+      select.innerHTML = imageOptions(select.value);
+    });
+  }
+
+  function addVariantRow(variant: VariantRow) {
+    const row = document.createElement('div');
+    row.className = 'variant';
+    row.dataset.id = variant.id === null ? '' : String(variant.id);
+    row.innerHTML = `
+      <label class="field">Color<input name="colorName" maxlength="40" required value="${escapeAttribute(variant.colorName)}" placeholder="Negro" /></label>
+      <label class="field">Tono<input name="colorHex" type="color" value="${variant.colorHex || '#25284a'}" /></label>
+      <label class="field">Stock<input name="stock" type="number" inputmode="numeric" min="0" step="1" required value="${variant.stock}" /></label>
+      <label class="field">Foto<select name="imageKey">${imageOptions(variant.imageKey)}</select></label>
+      <button type="button" class="remove-variant" aria-label="Quitar color">✕</button>`;
+    variantList.append(row);
+  }
+
+  imageList.addEventListener('click', (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button[data-action]');
+    if (!button) return;
+    const index = Number(button.dataset.index);
+
+    if (button.dataset.action === 'remove') images.splice(index, 1);
+    if (button.dataset.action === 'left') [images[index - 1], images[index]] = [images[index], images[index - 1]];
+    if (button.dataset.action === 'right') [images[index + 1], images[index]] = [images[index], images[index + 1]];
+    renderImages();
+  });
+
+  async function compressImage(file: File): Promise<Blob> {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, MAX_IMAGE_SIDE / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+
+    const context = canvas.getContext('2d')!;
+    // White background so transparent PNGs don't turn black as JPEG
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('compress failed'))), 'image/jpeg', JPEG_QUALITY);
+    });
+  }
+
+  imageInput.addEventListener('change', async () => {
+    const files = [...(imageInput.files ?? [])];
+    imageInput.value = '';
+
+    for (const [index, file] of files.entries()) {
+      if (images.length >= 10) {
+        uploadStatus.textContent = 'Máximo 10 fotos por producto.';
+        return;
+      }
+      uploadStatus.textContent = `Subiendo foto ${index + 1} de ${files.length}…`;
+      try {
+        const blob = await compressImage(file);
+        const response = await fetch('/api/admin/upload', { method: 'POST', headers: { 'Content-Type': 'image/jpeg' }, body: blob });
+        const result = (await response.json()) as { key?: string; error?: string };
+        if (!response.ok || !result.key) throw new Error(result.error ?? 'upload failed');
+        images.push(result.key);
+        renderImages();
+      } catch {
+        uploadStatus.textContent = `No se pudo subir "${file.name}". Prueba con otra foto (JPG o PNG).`;
+        return;
+      }
+    }
+    uploadStatus.textContent = files.length > 0 ? 'Fotos subidas. Recuerda guardar el producto.' : '';
+  });
+
+  variantList.addEventListener('click', (event) => {
+    const button = (event.target as HTMLElement).closest('.remove-variant');
+    if (!button) return;
+    if (variantList.children.length === 1) {
+      showErrors(['El producto necesita al menos un color.']);
+      return;
+    }
+    button.closest('.variant')!.remove();
+  });
+
+  document.getElementById('add-variant')!.addEventListener('click', () => {
+    addVariantRow({ id: null, colorName: '', colorHex: '#25284a', imageKey: '', stock: 0 });
+  });
+
+  function showErrors(errors: string[]) {
+    errorBox.innerHTML = `<ul>${errors.map((error) => `<li>${escapeAttribute(error)}</li>`).join('')}</ul>`;
+    errorBox.hidden = false;
+    errorBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function collectVariants(): VariantRow[] {
+    return [...variantList.querySelectorAll<HTMLElement>('.variant')].map((row) => {
+      const value = (name: string) => row.querySelector<HTMLInputElement | HTMLSelectElement>(`[name="${name}"]`)!.value;
+      return {
+        id: row.dataset.id ? Number(row.dataset.id) : null,
+        colorName: value('colorName'),
+        colorHex: value('colorHex'),
+        imageKey: value('imageKey'),
+        stock: Number(value('stock')),
+      };
+    });
+  }
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    errorBox.hidden = true;
+    saveButton.disabled = true;
+
+    const formData = new FormData(form);
+    const payload = {
+      title: formData.get('title'),
+      category: formData.get('category'),
+      price: Number(formData.get('price')),
+      compareAtPrice: formData.get('compareAtPrice') ? Number(formData.get('compareAtPrice')) : null,
+      shortDescription: formData.get('shortDescription'),
+      howToUse: formData.get('howToUse'),
+      specs: formData.get('specs'),
+      warranty: formData.get('warranty'),
+      videoUrl: formData.get('videoUrl'),
+      tags: formData.get('tags'),
+      isActive: formData.get('isActive') === 'on',
+      isFeatured: formData.get('isFeatured') === 'on',
+      isNew: formData.get('isNew') === 'on',
+      images,
+      variants: collectVariants(),
+    };
+
+    const url = initial.id === null ? '/api/admin/products' : `/api/admin/products/${initial.id}`;
+    try {
+      const response = await fetch(url, {
+        method: initial.id === null ? 'POST' : 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const result = (await response.json()) as { id?: number; errors?: string[] };
+      if (!response.ok) {
+        showErrors(result.errors ?? ['No se pudo guardar. Intenta de nuevo.']);
+        saveButton.disabled = false;
+        return;
+      }
+      location.href = '/admin';
+    } catch {
+      showErrors(['Revisa tu conexión a internet e intenta de nuevo.']);
+      saveButton.disabled = false;
+    }
+  });
+
+  document.getElementById('delete-product')?.addEventListener('click', async () => {
+    if (!confirm('¿Eliminar este producto? Esta acción no se puede deshacer. Si solo quieres ocultarlo, desmarca "Visible en la tienda".')) return;
+    const response = await fetch(`/api/admin/products/${initial.id}`, { method: 'DELETE' });
+    if (response.ok) location.href = '/admin';
+    else showErrors(['No se pudo eliminar el producto.']);
+  });
+
+  initial.variants.forEach(addVariantRow);
+  renderImages();
+</script>
+
+<style>
+  .back {
+    font-size: 0.9rem;
+    text-decoration: none;
+    color: var(--muted);
+  }
+
+  h1 {
+    font-size: 1.5rem;
+    margin-top: 8px;
+  }
+
+  .form {
+    display: grid;
+    gap: 16px;
+    max-width: 760px;
+  }
+
+  .card {
+    display: grid;
+    gap: 14px;
+    padding: 20px;
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+
+  .card h2 {
+    font-size: 1.1rem;
+    margin: 0;
+  }
+
+  .card > .hint {
+    margin: -8px 0 0;
+  }
+
+  .two {
+    display: grid;
+    gap: 14px;
+  }
+
+  @media (min-width: 600px) {
+    .two {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .toggles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .toggles label {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .toggles input {
+    width: 18px;
+    height: 18px;
+  }
+
+  .images {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .images :global(li) {
+    position: relative;
+    width: 110px;
+  }
+
+  .images :global(img) {
+    width: 110px;
+    height: 110px;
+    object-fit: cover;
+    border-radius: 10px;
+    background: var(--mint);
+  }
+
+  .images :global(.image-number) {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--navy);
+    color: #fff;
+    font-size: 0.75rem;
+    display: grid;
+    place-items: center;
+  }
+
+  .images :global(.image-actions) {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4px;
+  }
+
+  .images :global(.image-actions button) {
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    cursor: pointer;
+  }
+
+  .images :global(.image-actions button:disabled) {
+    opacity: 0.3;
+  }
+
+  .upload {
+    justify-self: start;
+  }
+
+  .variants {
+    display: grid;
+    gap: 12px;
+  }
+
+  .variants :global(.variant) {
+    display: grid;
+    grid-template-columns: 1fr 64px 90px;
+    gap: 10px;
+    align-items: start;
+    padding: 12px;
+    border-radius: 12px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+  }
+
+  .variants :global(.variant .field:nth-of-type(4)) {
+    grid-column: 1 / 3;
+  }
+
+  .variants :global(input[type='color']) {
+    padding: 4px;
+    height: 44px;
+  }
+
+  .variants :global(.remove-variant) {
+    align-self: end;
+    height: 44px;
+    border: 0;
+    border-radius: 10px;
+    background: #fdecea;
+    color: var(--danger);
+    cursor: pointer;
+  }
+
+  @media (min-width: 680px) {
+    .variants :global(.variant) {
+      grid-template-columns: 1fr 64px 90px 150px 44px;
+    }
+
+    .variants :global(.variant .field:nth-of-type(4)) {
+      grid-column: auto;
+    }
+  }
+
+  #add-variant {
+    justify-self: start;
+  }
+
+  .save-bar {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 12px 0;
+    background: var(--bg);
+  }
+
+  .save-bar .btn:last-child {
+    min-width: 200px;
+  }
+</style>

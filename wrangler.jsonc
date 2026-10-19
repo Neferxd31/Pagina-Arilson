@@ -1,0 +1,26 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "esencialescol",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "esencialescol",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "esencialescol-media"
+    }
+  ],
+  "vars": {
+    // Cloudflare Access values for the /admin protection, filled in after setup (see README)
+    "ACCESS_TEAM_DOMAIN": "",
+    "ACCESS_AUD": "",
+    // Turnstile anti-spam on checkout. This is Cloudflare's public test key: replace it with the real one (see README)
+    "TURNSTILE_SITE_KEY": "1x00000000000000000000AA"
+  }
+}

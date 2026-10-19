@@ -1,0 +1,391 @@
+---
+import '../styles/global.css';
+import { STORE } from '../config';
+
+interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+}
+
+const { title, description = STORE.description, image = '/og-default.jpg' } = Astro.props;
+const pageTitle = title ? `${title} | ${STORE.name}` : `${STORE.name} · ${STORE.tagline}`;
+const imageUrl = new URL(image, Astro.url.origin).href;
+const whatsappLink = `https://wa.me/${STORE.whatsappNumber}`;
+
+const navLinks = [
+  { href: '/', label: 'Inicio' },
+  { href: '/productos', label: 'Productos' },
+  { href: '/nosotros', label: 'Nosotros' },
+  { href: '/contacto', label: 'Contacto' },
+];
+
+const path = Astro.url.pathname;
+
+// Las páginas de producto cuentan como "Productos" en el menú
+function isActive(href: string): boolean {
+  if (href === '/') return path === '/';
+  if (href === '/productos') return path.startsWith('/productos') || path.startsWith('/p/');
+  return path.startsWith(href);
+}
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{pageTitle}</title>
+    <script is:inline>document.documentElement.classList.add('js');</script>
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={STORE.name} />
+    <meta property="og:title" content={title ?? STORE.name} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={imageUrl} />
+    <meta property="og:url" content={Astro.url.href} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#d3fef5" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container header-inner">
+        <a href="/" class="brand" aria-label={`${STORE.name} inicio`}>
+          <img src="/logo.png" alt="" width="40" height="33" />
+          <span>ESENCIALESCOL</span>
+        </a>
+        <nav id="site-nav" class="site-nav" aria-label="Principal">
+          {
+            navLinks.map((link) => (
+              <a href={link.href} class:list={{ active: isActive(link.href) }} aria-current={isActive(link.href) ? 'page' : undefined}>
+                {link.label}
+              </a>
+            ))
+          }
+        </nav>
+        <div class="header-actions">
+          <a href="/carrito" class="cart-link" aria-label="Ver carrito">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="9" cy="21" r="1"></circle>
+              <circle cx="20" cy="21" r="1"></circle>
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+            </svg>
+            <span class="cart-count" data-cart-count hidden>0</span>
+          </a>
+          <button type="button" class="menu-toggle" id="menu-toggle" aria-controls="site-nav" aria-expanded="false" aria-label="Abrir menú">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+              <path d="M3 6h18M3 12h18M3 18h18"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <slot />
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-grid">
+        <div>
+          <p class="footer-brand">ESENCIALESCOL</p>
+          <p>Tecnología útil, accesible y cercana. Desde Cúcuta para toda Colombia.</p>
+        </div>
+        <div>
+          <p class="footer-title">Explora</p>
+          <ul>
+            {navLinks.map((link) => <li><a href={link.href}>{link.label}</a></li>)}
+            <li><a href="/carrito">Carrito</a></li>
+          </ul>
+        </div>
+        <div>
+          <p class="footer-title">Hablemos</p>
+          <ul>
+            <li><a href={whatsappLink} target="_blank" rel="noopener">WhatsApp {STORE.whatsappDisplay}</a></li>
+            <li><a href={STORE.instagramUrl} target="_blank" rel="noopener">Instagram</a></li>
+            <li><a href={STORE.tiktokUrl} target="_blank" rel="noopener">TikTok</a></li>
+          </ul>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      import { updateCartBadge } from '../scripts/cart-store';
+      updateCartBadge();
+
+      const menuToggle = document.getElementById('menu-toggle')!;
+      const siteNav = document.getElementById('site-nav')!;
+
+      function setMenuOpen(open: boolean) {
+        siteNav.classList.toggle('open', open);
+        menuToggle.setAttribute('aria-expanded', String(open));
+        menuToggle.setAttribute('aria-label', open ? 'Cerrar menú' : 'Abrir menú');
+      }
+
+      // Elementos que aparecen al hacer scroll; los hermanos entran escalonados
+      const revealSelector = [
+        '.section-head',
+        '.page-hero .container > *',
+        '.product-grid > *',
+        '.categories li',
+        '.pillar',
+        '.steps li',
+        '.timeline li',
+        '.story-quote',
+        '.story > div',
+        '.stats',
+        '.testimonial',
+        '.trust',
+        '.cta',
+        '.channels li',
+        '.contact-form',
+      ].join(',');
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (!entry.isIntersecting) continue;
+            const element = entry.target as HTMLElement;
+            element.classList.add('is-visible');
+            observer.unobserve(element);
+            // Drop the reveal styles once shown so hover effects keep their own speed
+            element.addEventListener(
+              'transitionend',
+              () => {
+                element.classList.remove('reveal', 'is-visible');
+                element.style.removeProperty('--reveal-delay');
+              },
+              { once: true },
+            );
+          }
+        },
+        { rootMargin: '0px 0px -40px 0px' },
+      );
+
+      document.querySelectorAll<HTMLElement>(revealSelector).forEach((element) => {
+        // What is already on screen at load is never hidden, so the first view is never blank
+        if (element.getBoundingClientRect().top < innerHeight) return;
+        const siblingIndex = element.parentElement ? [...element.parentElement.children].indexOf(element) : 0;
+        element.style.setProperty('--reveal-delay', `${(siblingIndex % 4) * 90}ms`);
+        element.classList.add('reveal');
+        observer.observe(element);
+      });
+
+      menuToggle.addEventListener('click', () => setMenuOpen(!siteNav.classList.contains('open')));
+      siteNav.addEventListener('click', (event) => {
+        if ((event.target as HTMLElement).closest('a')) setMenuOpen(false);
+      });
+    </script>
+  </body>
+</html>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: rgba(211, 254, 245, 0.92);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--mint-strong);
+  }
+
+  .header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    font-weight: 800;
+    font-size: 1.05rem;
+    letter-spacing: 0.02em;
+  }
+
+  .site-nav {
+    display: none;
+    position: absolute;
+    top: 64px;
+    left: 0;
+    right: 0;
+    padding: 8px 16px 16px;
+    background: var(--mint);
+    border-bottom: 1px solid var(--mint-strong);
+    box-shadow: var(--shadow);
+  }
+
+  .site-nav.open {
+    display: grid;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .site-nav.open {
+      animation: menu-in 0.25s ease;
+    }
+
+    .cart-count.bump {
+      animation: bump 0.45s ease;
+    }
+  }
+
+  @keyframes menu-in {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .site-nav a {
+    padding: 12px 8px;
+    text-decoration: none;
+    font-weight: 600;
+    color: var(--navy);
+    border-radius: 10px;
+  }
+
+  .site-nav a:hover,
+  .site-nav a.active {
+    background: var(--mint-strong);
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .menu-toggle {
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: var(--navy);
+    cursor: pointer;
+  }
+
+  .menu-toggle:hover {
+    background: var(--mint-strong);
+  }
+
+  @media (min-width: 900px) {
+    .site-nav {
+      display: flex;
+      position: static;
+      gap: 4px;
+      padding: 0;
+      background: none;
+      border: 0;
+      box-shadow: none;
+    }
+
+    .site-nav a {
+      padding: 8px 14px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      border-radius: 999px;
+    }
+
+    .menu-toggle {
+      display: none;
+    }
+  }
+
+  .cart-link {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    color: var(--navy);
+  }
+
+  .cart-link:hover {
+    background: var(--mint-strong);
+  }
+
+  .cart-count {
+    position: absolute;
+    top: 2px;
+    right: 0;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--navy);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: grid;
+    place-items: center;
+  }
+
+  .cart-count[hidden] {
+    display: none;
+  }
+
+  main {
+    min-height: 70vh;
+  }
+
+  .site-footer {
+    margin-top: 64px;
+    padding: 40px 0;
+    background: var(--navy);
+    color: #e7e9f5;
+    font-size: 0.95rem;
+  }
+
+  .footer-grid {
+    display: grid;
+    gap: 24px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+
+  .footer-brand {
+    font-weight: 800;
+    font-size: 1.1rem;
+    margin: 0 0 8px;
+  }
+
+  .footer-title {
+    font-weight: 600;
+    margin: 0 0 8px;
+    color: var(--mint);
+  }
+
+  .site-footer ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+  }
+
+  .site-footer a {
+    text-decoration: none;
+  }
+
+  .site-footer a:hover {
+    text-decoration: underline;
+  }
+</style>

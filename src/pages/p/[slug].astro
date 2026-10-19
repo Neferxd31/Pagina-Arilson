@@ -1,0 +1,440 @@
+---
+import { env } from 'cloudflare:workers';
+import Layout from '../../layouts/Layout.astro';
+import { getProductBySlug, listCategories } from '../../lib/db';
+import { formatPrice, imageUrl } from '../../lib/format';
+import { videoEmbedUrl } from '../../lib/video';
+
+const product = await getProductBySlug(env.DB, Astro.params.slug ?? '');
+if (!product) return Astro.rewrite('/404');
+
+const categories = await listCategories(env.DB);
+const categoryName = categories.find((category) => category.slug === product.category)?.name ?? 'Productos';
+const images = product.images.length > 0 ? product.images : [''];
+const embedUrl = product.videoUrl ? videoEmbedUrl(product.videoUrl) : null;
+const showColorPicker = product.variants.length > 1;
+const firstInStock = product.variants.find((variant) => variant.stock > 0) ?? product.variants[0];
+const shareDescription = `${formatPrice(product.price)} · ${product.shortDescription || categoryName}`;
+
+const clientData = {
+  slug: product.slug,
+  title: product.title,
+  price: product.price,
+  image: product.images[0] ?? '',
+  variants: product.variants,
+  selectedId: firstInStock?.id,
+};
+---
+
+<Layout title={product.title} description={shareDescription} image={imageUrl(images[0])}>
+  <article class="container product">
+    <nav class="breadcrumb"><a href="/">Inicio</a> / <a href="/productos">Productos</a> / <a href={`/productos?categoria=${product.category}`}>{categoryName}</a></nav>
+
+    <div class="layout">
+      <div class="gallery">
+        <div class="main-image">
+          <img id="main-image" src={imageUrl(images[0])} alt={product.title} width="800" height="800" class:list={{ placeholder: !images[0] }} />
+        </div>
+        {
+          images.length > 1 && (
+            <div class="thumbs">
+              {images.map((key, index) => (
+                <button type="button" class:list={['thumb', { active: index === 0 }]} data-image={imageUrl(key)} aria-label={`Ver foto ${index + 1}`}>
+                  <img src={imageUrl(key)} alt="" loading="lazy" width="80" height="80" />
+                </button>
+              ))}
+            </div>
+          )
+        }
+      </div>
+
+      <div class="info">
+        <h1>{product.title}</h1>
+        <p class="product-price">
+          <span class="price">{formatPrice(product.price)}</span>
+          {product.compareAtPrice && <span class="price-old">{formatPrice(product.compareAtPrice)}</span>}
+        </p>
+        {product.shortDescription && <p class="short">{product.shortDescription}</p>}
+
+        {
+          showColorPicker && (
+            <fieldset class="colors">
+              <legend>
+                Color: <strong id="color-name">{firstInStock?.colorName}</strong>
+              </legend>
+              <div class="swatches">
+                {product.variants.map((variant) => (
+                  <button
+                    type="button"
+                    class:list={['swatch', { selected: variant.id === firstInStock?.id, 'sold-out': variant.stock === 0 }]}
+                    data-variant-id={variant.id}
+                    aria-label={`${variant.colorName}${variant.stock === 0 ? ' (agotado)' : ''}`}
+                    title={variant.colorName}
+                  >
+                    <span style={`background:${variant.colorHex || '#ffffff'}`} />
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+          )
+        }
+
+        <p class="stock" id="stock-label"></p>
+
+        <div class="buy">
+          <div class="qty">
+            <button type="button" id="qty-minus" aria-label="Quitar uno">−</button>
+            <output id="qty-value" aria-live="polite">1</output>
+            <button type="button" id="qty-plus" aria-label="Agregar uno">+</button>
+          </div>
+          <button type="button" class="btn add" id="add-to-cart">Agregar al carrito</button>
+        </div>
+        <p class="feedback" id="feedback" role="status"></p>
+
+        <div class="actions">
+          <a href="/carrito" class="btn btn-ghost btn-small">Ver carrito</a>
+          <button type="button" class="btn btn-ghost btn-small" id="share">Compartir</button>
+        </div>
+
+        {
+          product.howToUse && (
+            <section>
+              <h2>¿Para qué sirve y cómo se usa?</h2>
+              <p class="text">{product.howToUse}</p>
+            </section>
+          )
+        }
+        {
+          product.specs && (
+            <section>
+              <h2>Especificaciones y compatibilidad</h2>
+              <p class="text">{product.specs}</p>
+            </section>
+          )
+        }
+        {
+          product.warranty && (
+            <section class="warranty">
+              <h2>Garantía y respaldo</h2>
+              <p class="text">{product.warranty}</p>
+            </section>
+          )
+        }
+        {
+          product.videoUrl && (
+            <section>
+              <h2>Míralo en acción</h2>
+              {embedUrl ? (
+                <iframe src={embedUrl} title={`Video de ${product.title}`} loading="lazy" allowfullscreen class="video" />
+              ) : (
+                <a href={product.videoUrl} target="_blank" rel="noopener" class="btn btn-ghost btn-small">
+                  Ver video
+                </a>
+              )}
+            </section>
+          )
+        }
+      </div>
+    </div>
+  </article>
+
+  <script type="application/json" id="product-data" set:html={JSON.stringify(clientData)} />
+</Layout>
+
+<script>
+  import { addToCart } from '../../lib/cart';
+  import type { Variant } from '../../lib/db';
+  import { imageUrl } from '../../lib/format';
+  import { loadCart, saveCart } from '../../scripts/cart-store';
+
+  interface ProductData {
+    slug: string;
+    title: string;
+    price: number;
+    image: string;
+    variants: Variant[];
+    selectedId: number;
+  }
+
+  const data = JSON.parse(document.getElementById('product-data')!.textContent!) as ProductData;
+  const mainImage = document.getElementById('main-image') as HTMLImageElement;
+  const qtyOutput = document.getElementById('qty-value')!;
+  const stockLabel = document.getElementById('stock-label')!;
+  const addButton = document.getElementById('add-to-cart') as HTMLButtonElement;
+  const feedback = document.getElementById('feedback')!;
+
+  let selected = data.variants.find((variant) => variant.id === data.selectedId) ?? data.variants[0];
+  let qty = 1;
+
+  function inCart(variantId: number): number {
+    return loadCart().find((line) => line.variantId === variantId)?.qty ?? 0;
+  }
+
+  function render() {
+    const available = selected.stock - inCart(selected.id);
+    qty = Math.max(1, Math.min(qty, available));
+    qtyOutput.textContent = String(qty);
+    addButton.disabled = available < 1;
+
+    if (selected.stock === 0) stockLabel.textContent = 'Agotado en este color';
+    else if (available < 1) stockLabel.textContent = 'Ya tienes en el carrito todas las unidades disponibles';
+    else if (selected.stock <= 5) stockLabel.textContent = `¡Últimas ${selected.stock} unidades!`;
+    else stockLabel.textContent = 'Disponible';
+
+    const colorName = document.getElementById('color-name');
+    if (colorName) colorName.textContent = selected.colorName;
+  }
+
+  document.querySelectorAll<HTMLButtonElement>('.swatch').forEach((swatch) => {
+    swatch.addEventListener('click', () => {
+      selected = data.variants.find((variant) => variant.id === Number(swatch.dataset.variantId)) ?? selected;
+      document.querySelectorAll('.swatch').forEach((item) => item.classList.toggle('selected', item === swatch));
+      if (selected.imageKey) mainImage.src = imageUrl(selected.imageKey);
+      feedback.textContent = '';
+      qty = 1;
+      render();
+    });
+  });
+
+  document.querySelectorAll<HTMLButtonElement>('.thumb').forEach((thumb) => {
+    thumb.addEventListener('click', () => {
+      mainImage.src = thumb.dataset.image!;
+      document.querySelectorAll('.thumb').forEach((item) => item.classList.toggle('active', item === thumb));
+    });
+  });
+
+  document.getElementById('qty-minus')!.addEventListener('click', () => {
+    qty--;
+    render();
+  });
+
+  document.getElementById('qty-plus')!.addEventListener('click', () => {
+    qty++;
+    render();
+  });
+
+  addButton.addEventListener('click', () => {
+    const item = {
+      variantId: selected.id,
+      slug: data.slug,
+      title: data.title,
+      color: selected.colorName,
+      price: data.price,
+      image: selected.imageKey || data.image,
+      maxStock: selected.stock,
+    };
+    saveCart(addToCart(loadCart(), item, qty));
+    feedback.innerHTML = `Agregado al carrito. <a href="/carrito">Ir a pagar</a>`;
+    qty = 1;
+    render();
+  });
+
+  document.getElementById('share')!.addEventListener('click', async () => {
+    const shareData = { title: data.title, url: location.href };
+    if (navigator.share) {
+      await navigator.share(shareData).catch(() => undefined);
+      return;
+    }
+    await navigator.clipboard.writeText(location.href);
+    feedback.textContent = 'Link copiado. ¡Pégalo donde quieras compartirlo!';
+  });
+
+  render();
+</script>
+
+<style>
+  .product {
+    padding-top: 16px;
+  }
+
+  .breadcrumb {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  .breadcrumb a {
+    text-decoration: none;
+  }
+
+  .layout {
+    display: grid;
+    gap: 24px;
+  }
+
+  @media (min-width: 860px) {
+    .layout {
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      align-items: start;
+    }
+
+    .gallery {
+      position: sticky;
+      top: 80px;
+    }
+  }
+
+  .main-image {
+    aspect-ratio: 1;
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--mint);
+  }
+
+  .main-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .thumbs {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    overflow-x: auto;
+  }
+
+  .thumb {
+    flex-shrink: 0;
+    width: 64px;
+    height: 64px;
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    background: var(--mint);
+  }
+
+  .thumb.active {
+    border-color: var(--navy);
+  }
+
+  .thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  h1 {
+    font-size: clamp(1.4rem, 4vw, 2rem);
+    font-weight: 700;
+  }
+
+  .product-price {
+    font-size: 1.5rem;
+    margin: 0 0 12px;
+  }
+
+  .short {
+    color: var(--muted);
+    margin: 0 0 16px;
+  }
+
+  .colors {
+    border: 0;
+    padding: 0;
+    margin: 0 0 8px;
+  }
+
+  .colors legend {
+    padding: 0;
+    margin-bottom: 8px;
+  }
+
+  .swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .swatch {
+    width: 42px;
+    height: 42px;
+    padding: 3px;
+    border: 2px solid var(--line);
+    border-radius: 50%;
+    background: var(--surface);
+    cursor: pointer;
+  }
+
+  .swatch span {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  .swatch.selected {
+    border-color: var(--navy);
+  }
+
+  .swatch.sold-out {
+    opacity: 0.35;
+    background: linear-gradient(135deg, transparent 46%, var(--muted) 47%, var(--muted) 53%, transparent 54%);
+  }
+
+  .stock {
+    min-height: 1.5em;
+    margin: 8px 0;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--ok);
+  }
+
+  .buy {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .add {
+    flex: 1;
+    min-width: 180px;
+  }
+
+  .feedback {
+    min-height: 1.5em;
+    font-size: 0.9rem;
+    margin: 8px 0;
+  }
+
+  .actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+
+  section {
+    padding: 20px 0;
+    border-top: 1px solid var(--line);
+  }
+
+  section h2 {
+    font-size: 1.05rem;
+  }
+
+  .text {
+    white-space: pre-line;
+    margin: 0;
+    color: var(--muted);
+  }
+
+  .warranty {
+    background: var(--mint);
+    border: 0;
+    border-radius: var(--radius);
+    padding: 20px;
+    margin: 8px 0;
+  }
+
+  .video {
+    width: 100%;
+    max-width: 340px;
+    height: 600px;
+    border: 0;
+    border-radius: var(--radius);
+  }
+</style>

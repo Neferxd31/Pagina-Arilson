@@ -1,0 +1,501 @@
+---
+import { env } from 'cloudflare:workers';
+import ProductSection from '../components/ProductSection.astro';
+import Layout from '../layouts/Layout.astro';
+import { listCategories, listHomeSection, listLatestProducts } from '../lib/db';
+
+const [featured, newProducts, saleProducts, categories] = await Promise.all([
+  listHomeSection(env.DB, 'featured', 8),
+  listHomeSection(env.DB, 'new', 4),
+  listHomeSection(env.DB, 'sale', 4),
+  listCategories(env.DB),
+]);
+
+// Si aún no hay destacados, el inicio muestra lo más reciente para no quedar vacío
+const showcase = featured.length > 0 ? featured : await listLatestProducts(env.DB, 8);
+// En el inicio solo caben unas pocas; el admin decide cuáles con el campo "Orden"
+const HOME_CATEGORY_LIMIT = 6;
+const visibleCategories = categories.filter((category) => category.productCount > 0);
+const homeCategories = visibleCategories.slice(0, HOME_CATEGORY_LIMIT);
+
+const highlights = ['Envíos a toda Colombia', 'Garantía y respaldo real', 'Atención por WhatsApp'];
+
+const promises = [
+  { title: 'Seleccionamos', text: 'Solo productos útiles, probados y con criterio.' },
+  { title: 'Explicamos', text: 'Claro y sencillo: cómo se usa y para qué sirve.' },
+  { title: 'Acompañamos', text: 'Después de comprar seguimos contigo.' },
+];
+---
+
+<Layout>
+  <section class="hero">
+    <span class="blob blob-one" aria-hidden="true"></span>
+    <span class="blob blob-two" aria-hidden="true"></span>
+    <div class="container hero-inner">
+      <div class="hero-copy">
+        <p class="eyebrow">Tecnología útil para todos los días</p>
+        <h1>Comprar bien también puede sentirse <span class="highlight">fácil.</span></h1>
+        <p class="lead">Seleccionamos lo que sí resuelve, te explicamos cómo usarlo y te acompañamos después de comprar.</p>
+        <div class="hero-actions">
+          <a href="/productos" class="btn">Ver productos</a>
+          <a href="/contacto" class="btn btn-ghost">Hablemos</a>
+        </div>
+        <ul class="highlights">
+          {highlights.map((item) => <li>{item}</li>)}
+        </ul>
+      </div>
+      <div class="hero-visual" aria-hidden="true">
+        <span class="ring"></span>
+        <span class="ring"></span>
+        <span class="ring"></span>
+        <img src="/logo.png" alt="" class="hero-logo" width="275" height="226" />
+      </div>
+    </div>
+  </section>
+
+  <ProductSection
+    eyebrow={featured.length > 0 ? 'Destacados' : 'Recién llegados'}
+    title={featured.length > 0 ? 'Los favoritos de nuestros clientes' : 'Lo más reciente'}
+    linkHref="/productos"
+    products={showcase}
+  />
+
+  {
+    visibleCategories.length > 0 && (
+      <section class="container section">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Categorías</p>
+            <h2>Encuentra lo que necesitas</h2>
+          </div>
+          {visibleCategories.length > HOME_CATEGORY_LIMIT && (
+            <a href="/productos" class="link-arrow">
+              Ver todas →
+            </a>
+          )}
+        </div>
+        <ul class="categories">
+          {homeCategories.map((category) => (
+            <li>
+              <a href={`/productos?categoria=${category.slug}`} class="category">
+                <strong>{category.name}</strong>
+                <span class="hint">
+                  {category.productCount} {category.productCount === 1 ? 'producto' : 'productos'}
+                </span>
+                <span class="category-arrow" aria-hidden="true">→</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+
+  <ProductSection eyebrow="Nuevos" title="Acaba de llegar" linkHref="/productos?orden=nuevos" products={newProducts} />
+  <ProductSection eyebrow="Ofertas" title="Precios especiales" linkHref="/productos?oferta=1" products={saleProducts} />
+
+  <section class="container section">
+    <div class="trust">
+      <div>
+        <p class="eyebrow trust-eyebrow">Por qué EsencialesCol</p>
+        <h2>Comprar tecnología no debería sentirse como una apuesta.</h2>
+        <a href="/nosotros" class="btn btn-light">Conócenos</a>
+      </div>
+      <ol class="promises">
+        {
+          promises.map((promise, index) => (
+            <li>
+              <span class="promise-number">{String(index + 1).padStart(2, '0')}</span>
+              <strong>{promise.title}</strong>
+              <p>{promise.text}</p>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .hero {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, var(--mint) 0%, var(--mint) 55%, var(--teal) 130%);
+  }
+
+  /* Chevron blanco del arte de marca */
+  .hero::after {
+    content: '';
+    position: absolute;
+    right: -140px;
+    top: 50%;
+    width: 220px;
+    height: 220px;
+    border-left: 14px solid #fff;
+    border-bottom: 14px solid #fff;
+    transform: translateY(-50%) rotate(45deg);
+    opacity: 0.8;
+  }
+
+  .hero-inner {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    gap: 24px;
+    align-items: center;
+    padding-top: 48px;
+    padding-bottom: 56px;
+  }
+
+  h1 {
+    font-size: clamp(1.8rem, 6vw, 3rem);
+    font-weight: 800;
+    max-width: 16ch;
+  }
+
+  .lead {
+    max-width: 46ch;
+    color: var(--muted);
+    margin: 0 0 24px;
+  }
+
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .highlights {
+    list-style: none;
+    margin: 28px 0 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--navy);
+  }
+
+  .highlights li::before {
+    content: '✓';
+    margin-right: 6px;
+    color: var(--ok);
+    font-weight: 700;
+  }
+
+  .hero-visual {
+    display: none;
+    position: relative;
+    justify-self: center;
+    place-items: center;
+    width: 300px;
+    height: 300px;
+  }
+
+  .hero-logo {
+    position: relative;
+    width: 220px;
+  }
+
+  /* Ondas que salen del logo; invisibles si el movimiento está reducido */
+  .ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid var(--navy);
+    opacity: 0;
+  }
+
+  .highlight {
+    position: relative;
+    white-space: nowrap;
+  }
+
+  .highlight::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0.06em;
+    z-index: -1;
+    height: 0.32em;
+    border-radius: 999px;
+    background: var(--teal);
+    opacity: 0.55;
+  }
+
+  .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: 0.55;
+    pointer-events: none;
+  }
+
+  .blob-one {
+    width: 320px;
+    height: 320px;
+    top: -120px;
+    left: -80px;
+    background: var(--mint-strong);
+  }
+
+  .blob-two {
+    width: 280px;
+    height: 280px;
+    bottom: -140px;
+    right: 20%;
+    background: var(--teal);
+    opacity: 0.35;
+  }
+
+  /* Entrada en cascada de la portada y logo flotando */
+  @media (prefers-reduced-motion: no-preference) {
+    .hero-copy > * {
+      animation: fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .hero-copy > :nth-child(2) {
+      animation-delay: 0.08s;
+    }
+
+    .hero-copy > :nth-child(3) {
+      animation-delay: 0.16s;
+    }
+
+    .hero-copy > :nth-child(4) {
+      animation-delay: 0.24s;
+    }
+
+    .hero-copy > :nth-child(5) {
+      animation-delay: 0.32s;
+    }
+
+    .hero-logo {
+      animation: float 6s ease-in-out infinite;
+    }
+
+    .ring {
+      animation: ripple 4.5s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+    }
+
+    .ring:nth-child(2) {
+      animation-delay: 1.5s;
+    }
+
+    .ring:nth-child(3) {
+      animation-delay: 3s;
+    }
+
+    .highlight::after {
+      transform-origin: left;
+      animation: draw-line 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.6s both;
+    }
+
+    .hero::after {
+      animation:
+        chevron-in 1s cubic-bezier(0.22, 1, 0.36, 1) both,
+        chevron-drift 7s ease-in-out 1s infinite;
+    }
+
+    .blob-one {
+      animation: drift 18s ease-in-out infinite alternate;
+    }
+
+    .blob-two {
+      animation: drift 22s ease-in-out infinite alternate-reverse;
+    }
+
+    .category {
+      transition:
+        background 0.15s ease,
+        transform 0.2s ease;
+    }
+
+    .category:hover {
+      transform: translateY(-3px);
+    }
+
+    .category:hover .category-arrow {
+      transform: translate(4px, -50%);
+    }
+
+    .category-arrow {
+      transition: transform 0.2s ease;
+    }
+  }
+
+  @media (min-width: 800px) {
+    .hero-inner {
+      grid-template-columns: 1.4fr 1fr;
+      padding-top: 72px;
+      padding-bottom: 80px;
+    }
+
+    .hero-visual {
+      display: grid;
+    }
+
+    .hero::after {
+      right: -60px;
+    }
+  }
+
+  /* Celular: una sola fila deslizable que deja ver el borde de la siguiente tarjeta */
+  .categories {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 6px;
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .categories li {
+    flex: 0 0 72%;
+    scroll-snap-align: start;
+  }
+
+  @media (min-width: 720px) {
+    .categories {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      overflow: visible;
+    }
+  }
+
+  .category {
+    position: relative;
+    height: 100%;
+    display: grid;
+    align-content: center;
+    gap: 2px;
+    padding: 22px 48px 22px 22px;
+    border-radius: var(--radius);
+    background: var(--mint);
+    text-decoration: none;
+    transition: background 0.15s ease;
+  }
+
+  .category:hover {
+    background: var(--mint-strong);
+  }
+
+  .category-arrow {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.3rem;
+    color: var(--navy);
+  }
+
+  .trust {
+    display: grid;
+    gap: 24px;
+    padding: 32px 24px;
+    border-radius: var(--radius);
+    background: var(--navy);
+    color: #fff;
+  }
+
+  @media (min-width: 860px) {
+    .trust {
+      grid-template-columns: 1fr 1.3fr;
+      align-items: center;
+      padding: 40px;
+    }
+  }
+
+  .trust h2 {
+    font-size: clamp(1.3rem, 3.5vw, 1.8rem);
+    font-weight: 800;
+    margin-bottom: 20px;
+  }
+
+  .trust-eyebrow {
+    color: var(--mint-strong);
+  }
+
+  .btn-light {
+    background: var(--mint);
+    color: var(--navy);
+  }
+
+  .btn-light:hover {
+    background: #fff;
+  }
+
+  .promises {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 12px;
+  }
+
+  .promises li {
+    padding: 16px 18px;
+    border-radius: 12px;
+    background: var(--navy-soft);
+  }
+
+  .promise-number {
+    margin-right: 8px;
+    font-weight: 800;
+    color: var(--teal);
+  }
+
+  .promises p {
+    margin: 4px 0 0;
+    color: #d5d8ec;
+    font-size: 0.95rem;
+  }
+
+  @keyframes draw-line {
+    from {
+      transform: scaleX(0);
+    }
+
+    to {
+      transform: scaleX(1);
+    }
+  }
+
+  /* The chevron keeps its base translateY(-50%) rotate(45deg) in every frame */
+  @keyframes chevron-in {
+    from {
+      opacity: 0;
+      transform: translate(80px, -50%) rotate(45deg);
+    }
+
+    to {
+      opacity: 0.8;
+      transform: translate(0, -50%) rotate(45deg);
+    }
+  }
+
+  @keyframes chevron-drift {
+    0%,
+    100% {
+      transform: translate(0, -50%) rotate(45deg);
+    }
+
+    50% {
+      transform: translate(-14px, -50%) rotate(45deg);
+    }
+  }
+
+  @keyframes drift {
+    from {
+      transform: translate(0, 0) scale(1);
+    }
+
+    to {
+      transform: translate(60px, 40px) scale(1.15);
+    }
+  }
+</style>

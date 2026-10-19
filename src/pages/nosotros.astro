@@ -1,0 +1,655 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+// Stroke icons (24x24 viewBox) drawn inline so they take the color of the text
+const ICONS = {
+  zap: '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+  tag: '<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>',
+  eye: '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
+  heart:
+    '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>',
+  search: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+  check: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+  chat: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  smile: '<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>',
+  users:
+    '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  truck: '<rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>',
+  shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+  pin: '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>',
+};
+
+type IconName = keyof typeof ICONS;
+
+// Pilares de la propuesta de valor del pitch
+const pillars: { icon: IconName; title: string; text: string }[] = [
+  { icon: 'zap', title: 'Funcionalidad', text: 'Productos útiles, prácticos y elegidos para necesidades reales.' },
+  { icon: 'tag', title: 'Accesibilidad', text: 'Precios competitivos sin sacrificar criterio.' },
+  { icon: 'eye', title: 'Claridad', text: 'Información sencilla, honesta y transparente.' },
+  { icon: 'heart', title: 'Cercanía', text: 'Atención local, humana y personalizada.' },
+];
+
+const steps: { icon: IconName; title: string; text: string }[] = [
+  { icon: 'search', title: 'Identificamos', text: 'Necesidades tecnológicas reales de tu día a día.' },
+  { icon: 'check', title: 'Seleccionamos', text: 'Solo productos útiles, probados y con criterio.' },
+  { icon: 'chat', title: 'Explicamos', text: 'Claro y sencillo: cómo se usa y para qué sirve.' },
+  { icon: 'smile', title: 'Acompañamos', text: 'Después de comprar seguimos contigo. ¿Cómo te fue?' },
+];
+
+// Textos de relleno: reemplazar por testimonios reales de clientes antes de publicar
+const testimonials = [
+  {
+    name: 'Lorem Ipsum',
+    detail: 'Cliente · Cúcuta',
+    text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
+  },
+  {
+    name: 'Dolor Sit',
+    detail: 'Comerciante · Villa del Rosario',
+    text: 'Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
+  },
+  {
+    name: 'Amet Consectetur',
+    detail: 'Cliente · Bogotá',
+    text: 'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.',
+  },
+];
+---
+
+<Layout title="Nosotros" description="Conoce EsencialesCol: tecnología útil, accesible y cercana desde Cúcuta.">
+  <section class="page-hero about-hero">
+    <div class="container about-hero-inner">
+      <div>
+        <p class="eyebrow">Nosotros</p>
+        <h1>Ayudamos a comprar con confianza</h1>
+        <p class="section-lead">
+          EsencialesCol nace en Cúcuta para que comprar tecnología no se sienta como una apuesta. Más que vender productos, reducimos la
+          fricción en cada decisión.
+        </p>
+      </div>
+
+      <ul class="bento" aria-label="EsencialesCol en datos">
+        <li class="tile tile-clients">
+          <span class="tile-icon"><svg viewBox="0 0 24 24" set:html={ICONS.users} /></span>
+          <strong class="tile-number">35</strong>
+          <span class="tile-label">clientes fidelizados</span>
+        </li>
+        <li class="tile tile-warranty">
+          <span class="tile-icon"><svg viewBox="0 0 24 24" set:html={ICONS.shield} /></span>
+          <strong>Garantía real</strong>
+          <span class="tile-label">Respaldo después de comprar</span>
+        </li>
+        <li class="tile tile-chat">
+          <span class="tile-icon"><svg viewBox="0 0 24 24" set:html={ICONS.chat} /></span>
+          <strong>1 a 1</strong>
+          <span class="tile-label">Atención por WhatsApp</span>
+        </li>
+        <li class="tile tile-route">
+          <span class="route-point"><svg viewBox="0 0 24 24" set:html={ICONS.pin} /> Cúcuta</span>
+          <span class="route-line" aria-hidden="true">
+            <span class="route-truck"><svg viewBox="0 0 24 24" set:html={ICONS.truck} /></span>
+          </span>
+          <span class="route-point">Colombia</span>
+          <span class="tile-label route-caption">Envíos a todo el país</span>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="container section story">
+    <div>
+      <p class="eyebrow">Nuestra historia</p>
+      <h2>Encontramos una oportunidad en la desconfianza</h2>
+      <p>
+        EsencialesCol es un proyecto creado por el empresario Arilson Contreras. Nace del análisis de un mercado donde hay mucha oferta
+        pero poca información confiable: se vende por vender, solo porque es tendencia, y si el producto sale malo no siempre hay
+        garantía.
+      </p>
+      <p>
+        Nosotros elegimos otro camino: seleccionar lo que sí resuelve, explicarlo claro y acompañarte después de la compra. Convertir
+        la incertidumbre en confianza.
+      </p>
+    </div>
+
+    <figure class="story-quote">
+      <span class="quote-mark" aria-hidden="true">“</span>
+      <blockquote>La oportunidad: convertir incertidumbre en confianza.</blockquote>
+      <figcaption>Arilson Contreras · Creador de EsencialesCol</figcaption>
+    </figure>
+  </section>
+
+  <section class="container section">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Lo que nos mueve</p>
+        <h2>Cuatro principios en cada producto</h2>
+      </div>
+    </div>
+    <div class="pillars">
+      {
+        pillars.map((pillar) => (
+          <article class="pillar">
+            <span class="pillar-icon">
+              <svg viewBox="0 0 24 24" set:html={ICONS[pillar.icon]} />
+            </span>
+            <h3>{pillar.title}</h3>
+            <p>{pillar.text}</p>
+          </article>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="process">
+    <div class="container section">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Cómo trabajamos</p>
+          <h2>Un proceso simple para comprar con criterio</h2>
+        </div>
+      </div>
+      <ol class="timeline">
+        {
+          steps.map((step, index) => (
+            <li>
+              <span class="timeline-icon">
+                <svg viewBox="0 0 24 24" set:html={ICONS[step.icon]} />
+              </span>
+              <span class="timeline-number">{String(index + 1).padStart(2, '0')}</span>
+              <strong>{step.title}</strong>
+              <p>{step.text}</p>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+
+  <section id="testimonios" class="container section">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Testimonios</p>
+        <h2>Lo que dicen quienes ya compraron</h2>
+      </div>
+    </div>
+    <div class="testimonials">
+      {
+        testimonials.map((testimonial) => (
+          <figure class="testimonial">
+            <div class="stars" aria-label="5 de 5 estrellas">
+              ★★★★★
+            </div>
+            <blockquote>“{testimonial.text}”</blockquote>
+            <figcaption>
+              <span class="avatar" aria-hidden="true">
+                {testimonial.name
+                  .split(' ')
+                  .map((word) => word[0])
+                  .join('')}
+              </span>
+              <span>
+                <strong>{testimonial.name}</strong>
+                <span class="hint">{testimonial.detail}</span>
+              </span>
+            </figcaption>
+          </figure>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="container section">
+    <div class="cta">
+      <h2>¿Listo para comprar con confianza?</h2>
+      <div class="cta-actions">
+        <a href="/productos" class="btn">Ver productos</a>
+        <a href="/contacto" class="btn btn-ghost">Hablemos</a>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  svg {
+    width: 24px;
+    height: 24px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
+  }
+
+  .about-hero {
+    overflow: hidden;
+  }
+
+  .about-hero-inner {
+    display: grid;
+    gap: 32px;
+    align-items: center;
+  }
+
+  @media (min-width: 860px) {
+    .about-hero-inner {
+      grid-template-columns: 1.1fr 1fr;
+      padding-top: 16px;
+      padding-bottom: 16px;
+    }
+  }
+
+  /* Mosaico de datos de la portada */
+  .bento {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 12px;
+    width: 100%;
+    max-width: 460px;
+    justify-self: center;
+  }
+
+  .tile {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 18px;
+    border-radius: 20px;
+    background: #fff;
+    color: var(--navy);
+    box-shadow: 0 10px 30px rgba(37, 40, 74, 0.1);
+  }
+
+  .tile strong {
+    font-size: 1.15rem;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+
+  .tile-label {
+    font-size: 0.82rem;
+    font-weight: 500;
+    opacity: 0.8;
+  }
+
+  .tile-icon {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    margin-bottom: 8px;
+    border-radius: 12px;
+    background: var(--mint);
+  }
+
+  .tile-clients {
+    grid-row: span 2;
+    justify-content: flex-end;
+    background: var(--navy);
+    color: #fff;
+  }
+
+  .tile-clients .tile-icon {
+    margin-bottom: auto;
+    background: rgba(255, 255, 255, 0.14);
+    color: var(--mint-strong);
+  }
+
+  .tile .tile-number {
+    font-size: clamp(3rem, 9vw, 4.2rem);
+    line-height: 1;
+    color: var(--mint-strong);
+  }
+
+  .tile-chat {
+    background: var(--mint-strong);
+  }
+
+  .tile-chat .tile-icon {
+    background: rgba(255, 255, 255, 0.6);
+  }
+
+  .tile-route {
+    grid-column: span 2;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    column-gap: 12px;
+    background: var(--teal);
+  }
+
+  .route-point {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 800;
+  }
+
+  .route-point svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .route-line {
+    position: relative;
+    height: 2px;
+    background: repeating-linear-gradient(90deg, var(--navy) 0 6px, transparent 6px 12px);
+  }
+
+  .route-truck {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #fff;
+    transform: translateY(-50%);
+  }
+
+  .route-truck svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .route-caption {
+    grid-column: 1 / -1;
+    margin-top: 6px;
+  }
+
+  .story-quote {
+    position: relative;
+    margin: 0;
+    padding: 36px 32px 28px;
+    border-radius: 24px;
+    background: var(--navy);
+    color: #fff;
+    overflow: hidden;
+  }
+
+  .quote-mark {
+    position: absolute;
+    top: -28px;
+    right: 18px;
+    font-size: 9rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--teal);
+    opacity: 0.35;
+  }
+
+  .story-quote blockquote {
+    position: relative;
+    margin: 0 0 16px;
+    font-size: clamp(1.3rem, 3.5vw, 1.7rem);
+    font-weight: 800;
+    line-height: 1.3;
+  }
+
+  .story-quote figcaption {
+    color: var(--mint-strong);
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  .story {
+    display: grid;
+    gap: 28px;
+    align-items: center;
+  }
+
+  @media (min-width: 860px) {
+    .story {
+      grid-template-columns: 1.2fr 1fr;
+    }
+  }
+
+  .story h2 {
+    font-size: clamp(1.35rem, 4vw, 1.9rem);
+    font-weight: 800;
+  }
+
+  .story p:not(.eyebrow) {
+    color: var(--muted);
+    max-width: 60ch;
+  }
+
+  .pillars {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+
+  .pillar {
+    padding: 24px;
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+
+  .pillar-icon {
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    margin-bottom: 14px;
+    border-radius: 50%;
+    background: var(--mint);
+    color: var(--navy);
+  }
+
+  .pillar:nth-child(even) .pillar-icon {
+    background: var(--navy);
+    color: var(--mint);
+  }
+
+  .pillar h3 {
+    font-size: 1.05rem;
+    margin: 0 0 4px;
+  }
+
+  .pillar p {
+    margin: 0;
+    color: var(--muted);
+  }
+
+  .process {
+    margin-top: 48px;
+    padding-bottom: 48px;
+    background: var(--surface);
+  }
+
+  /* Línea de tiempo: vertical en celular, horizontal en escritorio */
+  .timeline {
+    position: relative;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 22px;
+  }
+
+  /* Each step draws the dashed segment down to the next one, so the line ends at the last icon */
+  .timeline li:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 56px;
+    bottom: -22px;
+    left: 27px;
+    width: 2px;
+    background: repeating-linear-gradient(var(--teal) 0 6px, transparent 6px 12px);
+  }
+
+  .timeline li {
+    position: relative;
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    column-gap: 16px;
+  }
+
+  .timeline-icon {
+    grid-row: span 3;
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--navy);
+    color: var(--mint);
+    box-shadow: 0 0 0 6px var(--surface);
+  }
+
+  .timeline-number {
+    font-weight: 800;
+    color: var(--teal);
+    font-size: 0.9rem;
+  }
+
+  .timeline p {
+    margin: 2px 0 0;
+    color: var(--muted);
+  }
+
+  @media (min-width: 860px) {
+    .timeline {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    .timeline li:not(:last-child)::after {
+      display: none;
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      top: 27px;
+      left: 12%;
+      right: 12%;
+      height: 2px;
+      background: repeating-linear-gradient(90deg, var(--teal) 0 6px, transparent 6px 12px);
+    }
+
+    .timeline li {
+      grid-template-columns: 1fr;
+      justify-items: center;
+      text-align: center;
+    }
+
+    .timeline-icon {
+      grid-row: auto;
+      margin-bottom: 12px;
+    }
+  }
+
+  .testimonials {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  }
+
+  .testimonial {
+    margin: 0;
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+
+  .stars {
+    color: #f2b01e;
+    letter-spacing: 2px;
+  }
+
+  blockquote {
+    margin: 0;
+    flex: 1;
+  }
+
+  figcaption {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  figcaption > span:last-child {
+    display: grid;
+  }
+
+  .avatar {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--mint-strong);
+    color: var(--navy);
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+
+  .cta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 28px;
+    border-radius: var(--radius);
+    background: var(--mint);
+  }
+
+  .cta h2 {
+    margin: 0;
+    font-size: clamp(1.2rem, 3.5vw, 1.6rem);
+    font-weight: 800;
+  }
+
+  .cta-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .route-truck {
+      animation: drive 3.5s ease-in-out infinite alternate;
+    }
+
+    .tile {
+      transition: transform 0.25s ease;
+    }
+
+    .tile:hover {
+      transform: translateY(-4px);
+    }
+
+    .pillar {
+      transition: transform 0.25s ease;
+    }
+
+    .pillar:hover {
+      transform: translateY(-4px);
+    }
+  }
+
+  /* El camión recorre la ruta Cúcuta → Colombia */
+  @keyframes drive {
+    from {
+      left: 0;
+    }
+
+    to {
+      left: calc(100% - 34px);
+    }
+  }
+</style>

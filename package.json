@@ -1,0 +1,26 @@
+{
+  "name": "esencialescol",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "test": "vitest run",
+    "db:migrate:local": "wrangler d1 migrations apply DB --local",
+    "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
+    "deploy": "astro build && wrangler deploy"
+  },
+  "dependencies": {
+    "@astrojs/cloudflare": "^14.3.4",
+    "astro": "^7.3.8",
+    "jose": "^6.2.12"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261010.1",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3",
+    "wrangler": "^4.149.0"
+  }
+}

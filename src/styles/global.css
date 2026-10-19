@@ -1,0 +1,389 @@
+:root {
+  --navy: #25284a;
+  --navy-soft: #3a3f6b;
+  --ink: #0f1020;
+  --muted: #5a6075;
+  --mint: #d3fef5;
+  --mint-strong: #a8efe2;
+  --teal: #6fcfdc;
+  --bg: #f6fffc;
+  --surface: #ffffff;
+  --line: #d9ebe7;
+  --danger: #b3261e;
+  --ok: #1d7a52;
+  --whatsapp: #1fa855;
+  --radius: 16px;
+  --shadow: 0 6px 24px rgba(37, 40, 74, 0.08);
+  font-family: 'Poppins', system-ui, sans-serif;
+  color: var(--ink);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  /* Keeps anchored sections from hiding under the sticky header */
+  scroll-padding-top: 72px;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  line-height: 1.55;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+a {
+  color: inherit;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.2;
+  margin: 0 0 0.5em;
+}
+
+.container {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--navy);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.btn:hover {
+  background: var(--navy-soft);
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-whatsapp {
+  background: var(--whatsapp);
+}
+
+.btn-whatsapp:hover {
+  background: #17914a;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--navy);
+  border: 2px solid var(--navy);
+}
+
+.btn-ghost:hover {
+  background: var(--mint);
+}
+
+.btn-small {
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: 0.9rem;
+}
+
+.btn-danger {
+  background: var(--danger);
+}
+
+.btn-danger:hover {
+  background: #8f1e18;
+}
+
+.price {
+  white-space: nowrap;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.price-old {
+  white-space: nowrap;
+  color: var(--muted);
+  text-decoration: line-through;
+  font-weight: 400;
+  margin-left: 6px;
+  font-size: 0.9em;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  font: inherit;
+  font-weight: 400;
+  color: var(--ink);
+}
+
+.field textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: 2px solid var(--teal);
+  border-color: var(--teal);
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 400;
+}
+
+.alert {
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: #fdecea;
+  color: var(--danger);
+  font-size: 0.95rem;
+}
+
+.alert ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.qty {
+  display: inline-flex;
+  align-items: center;
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.qty button {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 1.2rem;
+  color: var(--navy);
+  cursor: pointer;
+}
+
+.qty output {
+  min-width: 32px;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* Productos sin foto muestran el logo centrado en vez de recortado */
+img.placeholder {
+  object-fit: contain !important;
+  padding: 22%;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+/* Shared page blocks used by home, catalog, about and contact */
+.page-hero {
+  padding: 40px 0 32px;
+  background: linear-gradient(135deg, var(--mint) 0%, var(--mint) 60%, var(--teal) 160%);
+}
+
+.page-hero h1 {
+  font-size: clamp(1.7rem, 5vw, 2.6rem);
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.section {
+  padding-top: 48px;
+}
+
+.section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: 20px;
+}
+
+.section-head h2 {
+  font-size: clamp(1.35rem, 4vw, 1.9rem);
+  font-weight: 800;
+  margin: 0;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  font-weight: 600;
+  color: var(--navy-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.8rem;
+}
+
+.section-lead {
+  max-width: 60ch;
+  margin: 0;
+  color: var(--muted);
+}
+
+.link-arrow {
+  font-weight: 600;
+  color: var(--navy);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.link-arrow:hover {
+  text-decoration: underline;
+}
+
+.product-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 720px) {
+  .product-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+  }
+}
+
+@media (min-width: 1000px) {
+  .product-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* Animaciones: solo para quien no pidió reducir el movimiento en su dispositivo */
+@media (prefers-reduced-motion: no-preference) {
+  /* Smooth cross-fade between pages, handled natively by the browser */
+  @view-transition {
+    navigation: auto;
+  }
+
+  /* Only hidden when JS is running, so content never stays invisible if scripts fail */
+  .js .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition:
+      opacity 0.6s ease,
+      transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+
+  .js .reveal.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  .btn {
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease,
+      background 0.15s ease;
+  }
+
+  .btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(37, 40, 74, 0.18);
+  }
+
+  .btn:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+/* Ondas que salen del logo en el inicio */
+@keyframes ripple {
+  from {
+    transform: scale(0.55);
+    opacity: 0.35;
+  }
+
+  to {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
+@keyframes bump {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  40% {
+    transform: scale(1.35);
+  }
+}

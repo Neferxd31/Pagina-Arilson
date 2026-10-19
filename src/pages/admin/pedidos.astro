@@ -1,0 +1,214 @@
+---
+import { env } from 'cloudflare:workers';
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { listOrders } from '../../lib/db';
+import { formatPrice } from '../../lib/format';
+import { orderCode, type OrderStatus } from '../../lib/orders';
+
+const STATUS_LABELS: Record<OrderStatus, string> = {
+  pending: 'Pendientes',
+  confirmed: 'Confirmados',
+  cancelled: 'Cancelados',
+};
+
+const statusParam = Astro.url.searchParams.get('estado') as OrderStatus | null;
+const status: OrderStatus = statusParam && statusParam in STATUS_LABELS ? statusParam : 'pending';
+const orders = await listOrders(env.DB, status);
+
+// D1 guarda la fecha en UTC; se muestra en hora de Colombia
+const dateFormatter = new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Bogota' });
+---
+
+<AdminLayout title="Pedidos">
+  <h1>Pedidos</h1>
+  <p class="hint">
+    Los pedidos llegan aquí cuando el cliente pulsa "Pedir por WhatsApp". El stock se descuenta solo cuando confirmas la venta.
+  </p>
+
+  <nav class="tabs">
+    {
+      (Object.keys(STATUS_LABELS) as OrderStatus[]).map((key) => (
+        <a href={`/admin/pedidos?estado=${key}`} class:list={['tab', { active: key === status }]}>
+          {STATUS_LABELS[key]}
+        </a>
+      ))
+    }
+  </nav>
+
+  {orders.length === 0 && <p class="hint">No hay pedidos {STATUS_LABELS[status].toLowerCase()}.</p>}
+
+  <div id="order-error" class="alert" hidden></div>
+
+  <ul class="orders">
+    {
+      orders.map((order) => (
+        <li class="order">
+          <div class="order-head">
+            <strong>{orderCode(order.id)}</strong>
+            <span class="hint">{dateFormatter.format(new Date(`${order.createdAt.replace(' ', 'T')}Z`))}</span>
+          </div>
+          <p class="customer">
+            <strong>{order.customerName}</strong> · {order.city}
+            <br />
+            {order.address}
+            {order.notes && (
+              <>
+                <br />
+                <em>Notas: {order.notes}</em>
+              </>
+            )}
+          </p>
+          <ul class="items">
+            {order.items.map((item) => (
+              <li>
+                {item.qty} x {item.title} ({item.color}) <span>{formatPrice(item.subtotal)}</span>
+              </li>
+            ))}
+          </ul>
+          <div class="order-foot">
+            <span class="price">Total {formatPrice(order.total)}</span>
+            <div class="order-actions">
+              {order.status === 'pending' && (
+                <button type="button" class="btn btn-small" data-order={order.id} data-status="confirmed">
+                  Confirmar venta
+                </button>
+              )}
+              {order.status !== 'cancelled' && (
+                <button type="button" class="btn btn-ghost btn-small" data-order={order.id} data-status="cancelled">
+                  Cancelar
+                </button>
+              )}
+            </div>
+          </div>
+        </li>
+      ))
+    }
+  </ul>
+</AdminLayout>
+
+<script>
+  const errorBox = document.getElementById('order-error')!;
+
+  document.querySelectorAll<HTMLButtonElement>('button[data-order]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const isConfirm = button.dataset.status === 'confirmed';
+      const question = isConfirm
+        ? '¿Confirmar esta venta? Se descontará el stock.'
+        : '¿Cancelar este pedido? Si ya estaba confirmado, el stock se devuelve.';
+      if (!confirm(question)) return;
+
+      button.disabled = true;
+      const response = await fetch(`/api/admin/orders/${button.dataset.order}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: button.dataset.status }),
+      });
+
+      if (response.ok) {
+        location.reload();
+        return;
+      }
+      const result = (await response.json().catch(() => ({}))) as { errors?: string[] };
+      errorBox.textContent = (result.errors ?? ['No se pudo actualizar el pedido.']).join(' ');
+      errorBox.hidden = false;
+      button.disabled = false;
+    });
+  });
+</script>
+
+<style>
+  h1 {
+    font-size: 1.5rem;
+    margin: 0 0 4px;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin: 16px 0;
+    overflow-x: auto;
+  }
+
+  .tab {
+    padding: 8px 16px;
+    border-radius: 999px;
+    border: 1.5px solid var(--line);
+    background: var(--surface);
+    text-decoration: none;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+  }
+
+  .tab.active {
+    background: var(--navy);
+    border-color: var(--navy);
+    color: #fff;
+  }
+
+  .alert {
+    margin-bottom: 12px;
+  }
+
+  .orders {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 12px;
+  }
+
+  .order {
+    padding: 16px;
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    display: grid;
+    gap: 10px;
+  }
+
+  .order-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .customer {
+    margin: 0;
+    font-size: 0.95rem;
+  }
+
+  .items {
+    margin: 0;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--bg);
+    list-style: none;
+    display: grid;
+    gap: 4px;
+    font-size: 0.9rem;
+  }
+
+  .items li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .items span {
+    white-space: nowrap;
+  }
+
+  .order-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .order-actions {
+    display: flex;
+    gap: 8px;
+  }
+</style>
