@@ -73,3 +73,15 @@ Copia completa en un archivo (recomendado una vez por semana, guardarla fuera de
 ```bash
 npx wrangler d1 export esencialescol --remote --output=respaldo.sql
 ```
+
+## Vista previa temporal en Netlify
+
+Solo para mostrar el diseño: usa productos de ejemplo en memoria (nada se guarda), el admin está cerrado y no hay fotos.
+Netlify la compila sola con `netlify.toml` (`PREVIEW=netlify`). Para probarla en local:
+
+```bash
+PREVIEW=netlify npx astro dev --port 4500
+```
+
+Para quitarla cuando la tienda esté en Cloudflare: borrar `netlify.toml` y `src/preview/`, quitar el adaptador de Netlify de
+`astro.config.mjs` y desinstalarlo con `npm uninstall @astrojs/netlify`.

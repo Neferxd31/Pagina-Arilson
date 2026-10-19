@@ -1,0 +1,11 @@
+# Vista previa TEMPORAL de diseño con productos de ejemplo. La tienda real se publica en Cloudflare (ver README).
+# Para quitarla: borrar este archivo, la carpeta src/preview y el adaptador de Netlify en astro.config.mjs.
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  PREVIEW = "netlify"
+  # node:sqlite (base de datos de ejemplo en memoria) requiere Node 22
+  NODE_VERSION = "22"
+  AWS_LAMBDA_JS_RUNTIME = "nodejs22.x"
