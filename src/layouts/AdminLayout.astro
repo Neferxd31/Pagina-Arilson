@@ -27,7 +27,8 @@ const adminEmail = Astro.locals.adminEmail;
       <div class="container admin-nav">
         <a href="/admin" class="admin-brand"><img src="/logo.png" alt="" width="32" height="26" /> Admin</a>
         <nav>
-          <a href="/admin" class:list={{ active: path === '/admin' || path.startsWith('/admin/productos') }}>Productos</a>
+          <a href="/admin" class:list={{ active: path === '/admin' || path.startsWith('/admin/actividad') }}>Resumen</a>
+          <a href="/admin/productos" class:list={{ active: path.startsWith('/admin/productos') }}>Productos</a>
           <a href="/admin/categorias" class:list={{ active: path.startsWith('/admin/categorias') }}>Categorías</a>
           <a href="/admin/pedidos" class:list={{ active: path.startsWith('/admin/pedidos') }}>Pedidos</a>
           <a href="/" target="_blank">Ver tienda ↗</a>

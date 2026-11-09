@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { slugify, uniqueSlug } from '../src/lib/format';
+import { formatDateTime, slugify, uniqueSlug } from '../src/lib/format';
 import { validateProductInput } from '../src/lib/product-input';
 import { videoEmbedUrl } from '../src/lib/video';
 
@@ -103,5 +103,11 @@ describe('videoEmbedUrl', () => {
 
   it('returns null for links it cannot embed', () => {
     expect(videoEmbedUrl('https://vt.tiktok.com/ZSabc/')).toBeNull();
+  });
+});
+
+describe('formatDateTime', () => {
+  it('shows UTC database dates in Colombia time', () => {
+    expect(formatDateTime('2026-11-09 17:30:00')).toContain('12:30');
   });
 });

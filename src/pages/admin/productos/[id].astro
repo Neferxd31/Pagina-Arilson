@@ -8,7 +8,7 @@ let product: Product | null = null;
 
 if (!isNew) {
   product = await getProductById(env.DB, Number(Astro.params.id));
-  if (!product) return Astro.redirect('/admin');
+  if (!product) return Astro.redirect('/admin/productos');
 }
 
 const categories = await listCategories(env.DB);
@@ -22,7 +22,7 @@ const initialData = {
 ---
 
 <AdminLayout title={isNew ? 'Nuevo producto' : product!.title}>
-  <a href="/admin" class="back">← Productos</a>
+  <a href="/admin/productos" class="back">← Productos</a>
   <h1>{isNew ? 'Nuevo producto' : 'Editar producto'}</h1>
   {product && product.isActive && <p class="hint">Link para compartir: <a href={`/p/${product.slug}`} target="_blank">/p/{product.slug}</a></p>}
 
@@ -323,7 +323,7 @@ const initialData = {
         saveButton.disabled = false;
         return;
       }
-      location.href = '/admin';
+      location.href = '/admin/productos';
     } catch {
       showErrors(['Revisa tu conexión a internet e intenta de nuevo.']);
       saveButton.disabled = false;
@@ -333,7 +333,7 @@ const initialData = {
   document.getElementById('delete-product')?.addEventListener('click', async () => {
     if (!confirm('¿Eliminar este producto? Esta acción no se puede deshacer. Si solo quieres ocultarlo, desmarca "Visible en la tienda".')) return;
     const response = await fetch(`/api/admin/products/${initial.id}`, { method: 'DELETE' });
-    if (response.ok) location.href = '/admin';
+    if (response.ok) location.href = '/admin/productos';
     else showErrors(['No se pudo eliminar el producto.']);
   });
 

@@ -1,0 +1,180 @@
+---
+import { env } from 'cloudflare:workers';
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { ADMIN_STATUS_OPTIONS, filterAdminProducts, parseAdminProductFilters, totalStock } from '../../../lib/admin-products';
+import { listAllProducts, listCategories } from '../../../lib/db';
+import { formatPrice, imageUrl } from '../../../lib/format';
+
+const [allProducts, categories] = await Promise.all([listAllProducts(env.DB), listCategories(env.DB)]);
+const categoryNames = new Map(categories.map((category) => [category.slug, category.name]));
+const filters = parseAdminProductFilters(Astro.url.searchParams);
+const products = filterAdminProducts(allProducts, filters);
+const isFiltered = Boolean(filters.search || filters.category || filters.status);
+---
+
+<AdminLayout title="Productos">
+  <div class="toolbar">
+    <h1>Productos <span class="hint">({isFiltered ? `${products.length} de ${allProducts.length}` : allProducts.length})</span></h1>
+    <a href="/admin/productos/nuevo" class="btn">+ Nuevo producto</a>
+  </div>
+
+  <form class="filters" method="get" id="filters-form">
+    <input name="q" type="search" placeholder="Buscar por nombre o etiqueta" value={filters.search} aria-label="Buscar productos" />
+    <select name="categoria" aria-label="Categoría">
+      <option value="">Todas las categorías</option>
+      {categories.map((category) => <option value={category.slug} selected={filters.category === category.slug}>{category.name}</option>)}
+    </select>
+    <select name="estado" aria-label="Estado">
+      {ADMIN_STATUS_OPTIONS.map((option) => <option value={option.id} selected={filters.status === option.id}>{option.label}</option>)}
+    </select>
+    <button type="submit" class="btn btn-small">Filtrar</button>
+    {isFiltered && <a href="/admin/productos" class="btn btn-ghost btn-small">Limpiar</a>}
+  </form>
+
+  {allProducts.length === 0 && <p class="hint">Aún no hay productos. Crea el primero con el botón de arriba.</p>}
+  {allProducts.length > 0 && products.length === 0 && <p class="hint">Ningún producto coincide con estos filtros.</p>}
+
+  <ul class="list">
+    {
+      products.map((product) => {
+        const stock = totalStock(product);
+        return (
+          <li>
+            <a href={`/admin/productos/${product.id}`} class="row">
+              <img src={imageUrl(product.images[0] ?? '')} alt="" width="56" height="56" loading="lazy" class:list={{ placeholder: product.images.length === 0 }} />
+              <div class="row-info">
+                <strong>{product.title}</strong>
+                <span class="hint">
+                  {categoryNames.get(product.category) ?? 'Sin categoría'} · {product.variants.length} {product.variants.length === 1 ? 'color' : 'colores'}
+                </span>
+              </div>
+              <div class="row-meta">
+                <span class="price">{formatPrice(product.price)}</span>
+                <span class:list={['stock', { out: stock === 0 }]}>{stock === 0 ? 'Agotado' : `${stock} en stock`}</span>
+                {!product.isActive && <span class="tag">Oculto</span>}
+                {product.isFeatured && <span class="tag tag-featured">Destacado</span>}
+                {product.isNew && <span class="tag tag-featured">Nuevo</span>}
+              </div>
+            </a>
+          </li>
+        );
+      })
+    }
+  </ul>
+</AdminLayout>
+
+<style>
+  .toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+    margin: 0;
+  }
+
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .filters input,
+  .filters select {
+    min-height: 40px;
+    padding: 0 12px;
+    border: 1.5px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    font: inherit;
+    font-size: 0.9rem;
+  }
+
+  .filters input {
+    flex: 1 1 220px;
+  }
+
+  .list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    gap: 12px;
+    align-items: center;
+    padding: 12px;
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    text-decoration: none;
+  }
+
+  .row img {
+    width: 56px;
+    height: 56px;
+    object-fit: cover;
+    border-radius: 10px;
+    background: var(--mint);
+  }
+
+  .row-info {
+    display: grid;
+    min-width: 0;
+  }
+
+  .row-meta {
+    grid-column: 2;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    font-size: 0.9rem;
+  }
+
+  @media (min-width: 720px) {
+    .row {
+      grid-template-columns: 56px 1fr auto;
+    }
+
+    .row-meta {
+      grid-column: auto;
+      justify-content: flex-end;
+    }
+  }
+
+  .stock {
+    color: var(--ok);
+  }
+
+  .stock.out {
+    color: var(--danger);
+  }
+
+  .tag {
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: #eee;
+    font-size: 0.8rem;
+  }
+
+  .tag-featured {
+    background: var(--mint-strong);
+  }
+</style>
+
+<script>
+  // Cambiar categoría o estado filtra sin tener que pulsar el botón
+  const form = document.getElementById('filters-form') as HTMLFormElement;
+  form.querySelectorAll('select').forEach((select) => select.addEventListener('change', () => form.requestSubmit()));
+</script>

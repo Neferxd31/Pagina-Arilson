@@ -33,3 +33,10 @@ export function uniqueSlug(base: string, takenSlugs: string[]): string {
 export function imageUrl(key: string): string {
   return key ? `/img/${key}` : '/logo.png';
 }
+
+const dateTimeFormatter = new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Bogota' });
+
+// D1 guarda las fechas en UTC ("2026-11-09 17:30:00"); se muestran en hora de Colombia
+export function formatDateTime(utcSqliteDate: string): string {
+  return dateTimeFormatter.format(new Date(`${utcSqliteDate.replace(' ', 'T')}Z`)).replace(/\s/g, ' ');
+}

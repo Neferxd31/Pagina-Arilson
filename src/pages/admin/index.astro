@@ -1,134 +1,251 @@
 ---
 import { env } from 'cloudflare:workers';
 import AdminLayout from '../../layouts/AdminLayout.astro';
-import { listAllProducts, listCategories } from '../../lib/db';
-import { formatPrice, imageUrl } from '../../lib/format';
+import { describeActivity } from '../../lib/activity';
+import { LOW_STOCK_THRESHOLD } from '../../lib/admin-products';
+import { getDashboardStats, listActivity, listLowStock } from '../../lib/db';
+import { formatDateTime } from '../../lib/format';
 
-const [products, categories] = await Promise.all([listAllProducts(env.DB), listCategories(env.DB)]);
-const categoryNames = new Map(categories.map((category) => [category.slug, category.name]));
+const [stats, lowStock, activity] = await Promise.all([
+  getDashboardStats(env.DB),
+  listLowStock(env.DB, LOW_STOCK_THRESHOLD),
+  listActivity(env.DB, 8),
+]);
+
+const cards = [
+  { label: 'Pedidos pendientes', value: stats.pendingOrders, href: '/admin/pedidos', highlight: stats.pendingOrders > 0 },
+  { label: 'Productos visibles', value: stats.activeProducts, href: '/admin/productos?estado=visibles', highlight: false },
+  { label: 'Agotados', value: stats.soldOutProducts, href: '/admin/productos?estado=agotados', highlight: stats.soldOutProducts > 0 },
+  { label: 'Ocultos', value: stats.hiddenProducts, href: '/admin/productos?estado=ocultos', highlight: false },
+];
 ---
 
-<AdminLayout title="Productos">
-  <div class="toolbar">
-    <h1>Productos <span class="hint">({products.length})</span></h1>
-    <a href="/admin/productos/nuevo" class="btn">+ Nuevo producto</a>
-  </div>
+<AdminLayout title="Resumen">
+  <h1>Resumen</h1>
 
-  {products.length === 0 && <p class="hint">Aún no hay productos. Crea el primero con el botón de arriba.</p>}
-
-  <ul class="list">
+  <ul class="cards">
     {
-      products.map((product) => {
-        const stock = product.variants.reduce((sum, variant) => sum + variant.stock, 0);
-        return (
-          <li>
-            <a href={`/admin/productos/${product.id}`} class="row">
-              <img src={imageUrl(product.images[0] ?? '')} alt="" width="56" height="56" loading="lazy" class:list={{ placeholder: product.images.length === 0 }} />
-              <div class="row-info">
-                <strong>{product.title}</strong>
-                <span class="hint">
-                  {categoryNames.get(product.category) ?? 'Sin categoría'} · {product.variants.length} {product.variants.length === 1 ? 'color' : 'colores'}
-                </span>
-              </div>
-              <div class="row-meta">
-                <span class="price">{formatPrice(product.price)}</span>
-                <span class:list={['stock', { out: stock === 0 }]}>{stock === 0 ? 'Agotado' : `${stock} en stock`}</span>
-                {!product.isActive && <span class="tag">Oculto</span>}
-                {product.isFeatured && <span class="tag tag-featured">Destacado</span>}
-                {product.isNew && <span class="tag tag-featured">Nuevo</span>}
-              </div>
-            </a>
-          </li>
-        );
-      })
+      cards.map((card) => (
+        <li>
+          <a href={card.href} class:list={['card', { highlight: card.highlight }]}>
+            <strong>{card.value}</strong>
+            <span>{card.label}</span>
+          </a>
+        </li>
+      ))
     }
   </ul>
+
+  <div class="columns">
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Stock bajo <span class="hint">({LOW_STOCK_THRESHOLD} o menos)</span></h2>
+        <a href="/admin/productos?estado=stock-bajo" class="link-arrow">Ver todos →</a>
+      </div>
+      {lowStock.length === 0 && <p class="hint">Ningún color está por agotarse.</p>}
+      <ul class="rows">
+        {
+          lowStock.map((item) => (
+            <li>
+              <a href={`/admin/productos/${item.productId}`}>
+                {item.title} <span class="hint">({item.colorName})</span>
+              </a>
+              <span class="badge-low">{item.stock} und.</span>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Actividad reciente</h2>
+        <a href="/admin/actividad" class="link-arrow">Ver todo →</a>
+      </div>
+      {activity.length === 0 && <p class="hint">Aún no hay cambios registrados.</p>}
+      <ul class="rows">
+        {
+          activity.map((entry) => (
+            <li class="activity">
+              <span>
+                {describeActivity(entry.action)} <strong>{entry.target}</strong>
+              </span>
+              <span class="hint">
+                {entry.actor} · {formatDateTime(entry.createdAt)}
+              </span>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+  </div>
+
+  <section class="panel maintenance">
+    <h2>Mantenimiento</h2>
+    <p class="hint">
+      Borra las fotos que se subieron pero nunca se guardaron en un producto, para no ocupar espacio. Las fotos subidas en las últimas 24
+      horas no se tocan.
+    </p>
+    <button type="button" class="btn btn-ghost btn-small" id="cleanup-images">Limpiar fotos sin usar</button>
+    <p class="hint" id="cleanup-result" role="status"></p>
+  </section>
 </AdminLayout>
 
-<style>
-  .toolbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-    margin-bottom: 16px;
-  }
+<script>
+  const button = document.getElementById('cleanup-images') as HTMLButtonElement;
+  const result = document.getElementById('cleanup-result')!;
 
+  button.addEventListener('click', async () => {
+    if (!confirm('¿Borrar las fotos que ningún producto usa? No se puede deshacer.')) return;
+    button.disabled = true;
+    result.textContent = 'Revisando fotos…';
+
+    const response = await fetch('/api/admin/images/cleanup', { method: 'POST' }).catch(() => null);
+    button.disabled = false;
+    if (!response?.ok) {
+      result.textContent = 'No se pudo completar la limpieza. Intenta de nuevo.';
+      return;
+    }
+
+    const { deleted } = (await response.json()) as { deleted: number };
+    result.textContent = deleted === 0 ? 'No había fotos sin usar.' : `Listo: se borraron ${deleted} foto(s) sin usar.`;
+  });
+</script>
+
+<style>
   h1 {
     font-size: 1.5rem;
-    margin: 0;
+    margin: 0 0 16px;
   }
 
-  .list {
+  .cards {
     list-style: none;
-    margin: 0;
+    margin: 0 0 20px;
     padding: 0;
     display: grid;
-    gap: 10px;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   }
 
-  .row {
+  .card {
     display: grid;
-    grid-template-columns: 56px 1fr;
-    gap: 12px;
-    align-items: center;
-    padding: 12px;
+    gap: 2px;
+    padding: 18px;
     border-radius: var(--radius);
     background: var(--surface);
     box-shadow: var(--shadow);
     text-decoration: none;
   }
 
-  .row img {
-    width: 56px;
-    height: 56px;
-    object-fit: cover;
-    border-radius: 10px;
-    background: var(--mint);
+  .card strong {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--navy);
+    line-height: 1.1;
   }
 
-  .row-info {
-    display: grid;
-    min-width: 0;
-  }
-
-  .row-meta {
-    grid-column: 2;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
+  .card span {
+    color: var(--muted);
     font-size: 0.9rem;
   }
 
-  @media (min-width: 720px) {
-    .row {
-      grid-template-columns: 56px 1fr auto;
+  .card.highlight {
+    background: var(--navy);
+  }
+
+  .card.highlight strong {
+    color: var(--mint-strong);
+  }
+
+  .card.highlight span {
+    color: #fff;
+  }
+
+  .columns {
+    display: grid;
+    gap: 16px;
+  }
+
+  @media (min-width: 860px) {
+    .columns {
+      grid-template-columns: 1fr 1fr;
+      align-items: start;
     }
-
-    .row-meta {
-      grid-column: auto;
-      justify-content: flex-end;
-    }
   }
 
-  .stock {
-    color: var(--ok);
+  .panel {
+    padding: 18px;
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow);
   }
 
-  .stock.out {
-    color: var(--danger);
+  .panel h2 {
+    font-size: 1.05rem;
+    margin: 0;
   }
 
-  .tag {
+  .panel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .rows {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+  }
+
+  .rows li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 0;
+    border-top: 1px solid var(--line);
+    font-size: 0.92rem;
+  }
+
+  .rows li:first-child {
+    border-top: 0;
+  }
+
+  .rows a {
+    text-decoration: none;
+  }
+
+  .rows a:hover {
+    text-decoration: underline;
+  }
+
+  .rows .activity {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+  }
+
+  .badge-low {
+    flex-shrink: 0;
     padding: 2px 10px;
     border-radius: 999px;
-    background: #eee;
+    background: #fff4e0;
+    color: #8a5300;
     font-size: 0.8rem;
+    font-weight: 600;
   }
 
-  .tag-featured {
-    background: var(--mint-strong);
+  .maintenance {
+    margin-top: 16px;
+    display: grid;
+    gap: 8px;
+    justify-items: start;
+  }
+
+  .maintenance .hint {
+    margin: 0;
   }
 </style>

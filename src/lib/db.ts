@@ -411,3 +411,61 @@ export async function recordOrderAttempt(db: D1Database, ipHash: string): Promis
     db.prepare('INSERT INTO order_attempts (ip_hash) VALUES (?)').bind(ipHash),
   ]);
 }
+
+export interface DashboardStats {
+  pendingOrders: number;
+  activeProducts: number;
+  hiddenProducts: number;
+  soldOutProducts: number;
+}
+
+export interface LowStockItem {
+  productId: number;
+  title: string;
+  colorName: string;
+  stock: number;
+}
+
+export async function getDashboardStats(db: D1Database): Promise<DashboardStats> {
+  const row = await db
+    .prepare(
+      `SELECT
+        (SELECT COUNT(*) FROM orders WHERE status = 'pending') AS pending_orders,
+        (SELECT COUNT(*) FROM products WHERE is_active = 1) AS active_products,
+        (SELECT COUNT(*) FROM products WHERE is_active = 0) AS hidden_products,
+        (SELECT COUNT(*) FROM products p WHERE p.is_active = 1
+          AND NOT EXISTS (SELECT 1 FROM variants v WHERE v.product_id = p.id AND v.stock > 0)) AS sold_out_products`,
+    )
+    .first<{ pending_orders: number; active_products: number; hidden_products: number; sold_out_products: number }>();
+
+  return {
+    pendingOrders: row?.pending_orders ?? 0,
+    activeProducts: row?.active_products ?? 0,
+    hiddenProducts: row?.hidden_products ?? 0,
+    soldOutProducts: row?.sold_out_products ?? 0,
+  };
+}
+
+export async function listLowStock(db: D1Database, threshold: number): Promise<LowStockItem[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT p.id AS product_id, p.title, v.color_name, v.stock
+       FROM variants v JOIN products p ON p.id = v.product_id
+       WHERE p.is_active = 1 AND v.stock BETWEEN 1 AND ?
+       ORDER BY v.stock, p.title LIMIT 20`,
+    )
+    .bind(threshold)
+    .all<{ product_id: number; title: string; color_name: string; stock: number }>();
+  return results.map((row) => ({ productId: row.product_id, title: row.title, colorName: row.color_name, stock: row.stock }));
+}
+
+export async function listUsedImageKeys(db: D1Database): Promise<Set<string>> {
+  const [products, variants] = await db.batch<{ images?: string; image_key?: string }>([
+    db.prepare('SELECT images FROM products'),
+    db.prepare("SELECT image_key FROM variants WHERE image_key != ''"),
+  ]);
+  const keys = new Set<string>();
+  for (const row of products.results) for (const key of JSON.parse(row.images ?? '[]') as string[]) keys.add(key);
+  for (const row of variants.results) keys.add(row.image_key!);
+  return keys;
+}

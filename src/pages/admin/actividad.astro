@@ -1,0 +1,68 @@
+---
+import { env } from 'cloudflare:workers';
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { describeActivity } from '../../lib/activity';
+import { listActivity } from '../../lib/db';
+import { formatDateTime } from '../../lib/format';
+
+const activity = await listActivity(env.DB, 200);
+---
+
+<AdminLayout title="Actividad">
+  <a href="/admin" class="back">← Resumen</a>
+  <h1>Actividad</h1>
+  <p class="hint">Los últimos 200 cambios hechos en el admin, con quién los hizo y cuándo (hora de Colombia).</p>
+
+  {activity.length === 0 && <p class="hint">Aún no hay cambios registrados.</p>}
+
+  <ul class="log">
+    {
+      activity.map((entry) => (
+        <li>
+          <span>
+            {describeActivity(entry.action)} <strong>{entry.target}</strong>
+          </span>
+          <span class="hint">
+            {entry.actor} · {formatDateTime(entry.createdAt)}
+          </span>
+        </li>
+      ))
+    }
+  </ul>
+</AdminLayout>
+
+<style>
+  .back {
+    font-size: 0.9rem;
+    text-decoration: none;
+    color: var(--muted);
+  }
+
+  h1 {
+    font-size: 1.5rem;
+    margin: 8px 0 4px;
+  }
+
+  .log {
+    list-style: none;
+    margin: 16px 0 0;
+    padding: 0 18px;
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+
+  .log li {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 4px 16px;
+    padding: 12px 0;
+    border-top: 1px solid var(--line);
+    font-size: 0.92rem;
+  }
+
+  .log li:first-child {
+    border-top: 0;
+  }
+</style>

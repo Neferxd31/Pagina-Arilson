@@ -102,6 +102,7 @@ export const env = {
       throw new Error('La vista previa no guarda fotos');
     },
     delete: async () => undefined,
+    list: async () => ({ objects: [], truncated: false }),
   } as unknown as R2Bucket,
   // Empty Access values keep /admin closed (403) in the preview
   ACCESS_TEAM_DOMAIN: '',
