@@ -469,3 +469,10 @@ export async function listUsedImageKeys(db: D1Database): Promise<Set<string>> {
   for (const row of variants.results) keys.add(row.image_key!);
   return keys;
 }
+
+export async function listSitemapProducts(db: D1Database): Promise<{ slug: string; updatedAt: string }[]> {
+  const { results } = await db
+    .prepare('SELECT slug, updated_at FROM products WHERE is_active = 1 ORDER BY id')
+    .all<{ slug: string; updated_at: string }>();
+  return results.map((row) => ({ slug: row.slug, updatedAt: row.updated_at }));
+}

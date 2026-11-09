@@ -1,0 +1,31 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { STORE } from '../config';
+---
+
+<Layout title="Algo salió mal">
+  <div class="container error-page">
+    <h1>Algo salió mal</h1>
+    <p>Tuvimos un problema al cargar esta página. Intenta de nuevo en un momento.</p>
+    <p>Si quieres hacer un pedido ya mismo, escríbenos por WhatsApp.</p>
+    <div class="actions">
+      <a href="/" class="btn">Volver al inicio</a>
+      <a href={`https://wa.me/${STORE.whatsappNumber}`} class="btn btn-whatsapp" target="_blank" rel="noopener">Escribir por WhatsApp</a>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .error-page {
+    padding: 80px 16px;
+    text-align: center;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+  }
+</style>

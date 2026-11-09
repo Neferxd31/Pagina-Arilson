@@ -2,7 +2,8 @@
 import { env } from 'cloudflare:workers';
 import Layout from '../../layouts/Layout.astro';
 import { getProductBySlug, listCategories } from '../../lib/db';
-import { formatPrice, imageUrl } from '../../lib/format';
+import { formatPrice, imageUrl, jsonForScript } from '../../lib/format';
+import { productJsonLd } from '../../lib/seo';
 import { videoEmbedUrl } from '../../lib/video';
 
 const product = await getProductBySlug(env.DB, Astro.params.slug ?? '');
@@ -15,6 +16,10 @@ const embedUrl = product.videoUrl ? videoEmbedUrl(product.videoUrl) : null;
 const showColorPicker = product.variants.length > 1;
 const firstInStock = product.variants.find((variant) => variant.stock > 0) ?? product.variants[0];
 const shareDescription = `${formatPrice(product.price)} · ${product.shortDescription || categoryName}`;
+const structuredData = productJsonLd(product, {
+  origin: Astro.url.origin,
+  imageUrls: product.images.map((key) => new URL(imageUrl(key), Astro.url.origin).href),
+});
 
 const clientData = {
   slug: product.slug,
@@ -138,7 +143,8 @@ const clientData = {
     </div>
   </article>
 
-  <script type="application/json" id="product-data" set:html={JSON.stringify(clientData)} />
+  <script type="application/json" id="product-data" set:html={jsonForScript(clientData)} />
+  <script type="application/ld+json" set:html={structuredData} />
 </Layout>
 
 <script>

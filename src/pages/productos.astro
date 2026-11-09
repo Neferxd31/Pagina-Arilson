@@ -24,6 +24,7 @@ const activeFilters = [
   filters.maxPrice !== null && { label: `Hasta ${formatPrice(filters.maxPrice)}`, href: catalogUrl(filters, { maxPrice: null }) },
   filters.inStock && { label: 'Disponibles', href: catalogUrl(filters, { inStock: false }) },
   filters.onSale && { label: 'En oferta', href: catalogUrl(filters, { onSale: false }) },
+  filters.isNew && { label: 'Nuevos', href: catalogUrl(filters, { isNew: false }) },
 ].filter((item): item is { label: string; href: string } => Boolean(item));
 
 const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1).filter(
@@ -31,7 +32,10 @@ const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1).
 );
 ---
 
-<Layout title={currentCategory ? currentCategory.name : 'Productos'}>
+<Layout
+  title={currentCategory ? currentCategory.name : 'Productos'}
+  canonicalPath={currentCategory ? `/productos?categoria=${currentCategory.slug}` : '/productos'}
+>
   <section class="page-hero">
     <div class="container">
       <p class="eyebrow">Catálogo</p>
@@ -92,6 +96,10 @@ const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1).
           <label class="option">
             <input type="checkbox" name="oferta" value="1" checked={filters.onSale} />
             Solo en oferta
+          </label>
+          <label class="option">
+            <input type="checkbox" name="nuevos" value="1" checked={filters.isNew} />
+            Solo nuevos
           </label>
         </fieldset>
 

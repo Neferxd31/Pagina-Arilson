@@ -1,0 +1,56 @@
+---
+import Layout from './Layout.astro';
+
+interface Props {
+  title: string;
+  description: string;
+}
+
+const { title, description } = Astro.props;
+---
+
+<Layout title={title} description={description}>
+  <section class="page-hero">
+    <div class="container">
+      <p class="eyebrow">Información legal</p>
+      <h1>{title}</h1>
+      <p class="section-lead">{description}</p>
+    </div>
+  </section>
+
+  <article class="container legal">
+    {/* Borrador: quitar este aviso cuando un abogado o Arilson revise y complete el texto */}
+    <p class="draft">Borrador pendiente de revisión legal. Los campos marcados como [Pendiente] deben completarse antes de publicar.</p>
+    <slot />
+  </article>
+</Layout>
+
+<style>
+  .legal {
+    max-width: 780px;
+    padding-top: 32px;
+  }
+
+  .draft {
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: #fff4e0;
+    color: #6b4200;
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  .legal :global(h2) {
+    margin-top: 32px;
+    font-size: 1.2rem;
+  }
+
+  .legal :global(p),
+  .legal :global(li) {
+    color: var(--muted);
+  }
+
+  .legal :global(ul) {
+    padding-left: 20px;
+  }
+</style>

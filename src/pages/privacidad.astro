@@ -1,0 +1,52 @@
+---
+import LegalLayout from '../layouts/LegalLayout.astro';
+import { STORE } from '../config';
+---
+
+<LegalLayout title="Política de privacidad" description="Cómo tratamos tus datos personales, según la Ley 1581 de 2012 de Colombia.">
+  <h2>1. Responsable del tratamiento</h2>
+  <ul>
+    <li>Nombre: Arilson Gilberto Contreras Hernández (EsencialesCol).</li>
+    <li>Identificación: [Pendiente: cédula o NIT].</li>
+    <li>Domicilio: Cúcuta, Norte de Santander, Colombia. [Pendiente: dirección completa].</li>
+    <li>Contacto: WhatsApp {STORE.whatsappDisplay} · Correo: [Pendiente].</li>
+  </ul>
+
+  <h2>2. Qué datos recolectamos</h2>
+  <p>Cuando haces un pedido en la tienda guardamos solo lo necesario para gestionarlo:</p>
+  <ul>
+    <li>Nombre, ciudad, dirección y barrio, y las notas que escribas.</li>
+    <li>Los productos, colores, cantidades y el total del pedido.</li>
+    <li>La fecha y hora en que autorizaste el tratamiento de tus datos.</li>
+  </ul>
+  <p>
+    No recibimos datos de pago en la página: el pago se acuerda por WhatsApp. Por seguridad, para evitar pedidos falsos, guardamos durante
+    una hora una huella cifrada de la conexión desde la que se hizo el pedido; nunca la dirección IP real.
+  </p>
+
+  <h2>3. Para qué usamos tus datos</h2>
+  <ul>
+    <li>Preparar, enviar y hacer seguimiento a tu pedido.</li>
+    <li>Contactarte por WhatsApp sobre ese pedido, su entrega y su garantía.</li>
+    <li>[Pendiente: otras finalidades, por ejemplo promociones, solo si Arilson las va a usar].</li>
+  </ul>
+
+  <h2>4. Tus derechos</h2>
+  <p>Como titular de tus datos puedes, en cualquier momento:</p>
+  <ul>
+    <li>Conocer, actualizar y rectificar tus datos.</li>
+    <li>Pedir prueba de la autorización que nos diste.</li>
+    <li>Saber qué uso le hemos dado a tus datos.</li>
+    <li>Revocar la autorización o pedir que borremos tus datos, cuando no exista un deber legal de conservarlos.</li>
+    <li>Presentar quejas ante la Superintendencia de Industria y Comercio.</li>
+  </ul>
+
+  <h2>5. Cómo ejercer tus derechos</h2>
+  <p>
+    Escríbenos por WhatsApp al {STORE.whatsappDisplay} o al correo [Pendiente]. Respondemos consultas en máximo 10 días hábiles y reclamos
+    en máximo 15 días hábiles.
+  </p>
+
+  <h2>6. Vigencia</h2>
+  <p>Esta política rige desde [Pendiente: fecha de publicación]. Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+</LegalLayout>

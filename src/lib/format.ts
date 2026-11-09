@@ -40,3 +40,8 @@ const dateTimeFormatter = new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium'
 export function formatDateTime(utcSqliteDate: string): string {
   return dateTimeFormatter.format(new Date(`${utcSqliteDate.replace(' ', 'T')}Z`)).replace(/\s/g, ' ');
 }
+
+// JSON placed inside a <script> tag: "<" is escaped so no text (like a product title) can close the tag early
+export function jsonForScript(data: unknown): string {
+  return JSON.stringify(data).replace(/</g, '\\u003c');
+}

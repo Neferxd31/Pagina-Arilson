@@ -1,0 +1,31 @@
+---
+import LegalLayout from '../layouts/LegalLayout.astro';
+import { STORE } from '../config';
+---
+
+<LegalLayout title="Envíos y garantías" description="Cómo llegan tus productos y qué hacer si algo no está bien.">
+  <h2>Envíos</h2>
+  <ul>
+    <li>Cúcuta y área metropolitana: entrega a domicilio. [Pendiente: costo y tiempo de entrega].</li>
+    <li>Resto de Colombia: envío por transportadora. [Pendiente: transportadoras, costo y tiempo estimado].</li>
+    <li>El costo y la fecha de entrega se confirman por WhatsApp antes de cerrar la compra.</li>
+  </ul>
+
+  <h2>Derecho de retracto</h2>
+  <p>
+    Como la compra se hace a distancia, tienes 5 días hábiles desde que recibes el producto para retractarte, siempre que el producto esté
+    sin uso y en su empaque original (Ley 1480 de 2011, artículo 47). [Pendiente: quién asume el costo del envío de devolución].
+  </p>
+
+  <h2>Garantía</h2>
+  <p>
+    Todos los productos tienen garantía legal por defectos de fabricación. El tiempo de garantía de cada producto aparece en su página.
+    [Pendiente: tiempo mínimo general de garantía]. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+  </p>
+
+  <h2>Cómo hacer un reclamo</h2>
+  <p>
+    Escríbenos al WhatsApp {STORE.whatsappDisplay} con tu número de pedido (empieza por EC-), una foto o video del problema y la fecha de
+    compra. Te respondemos en máximo 15 días hábiles.
+  </p>
+</LegalLayout>

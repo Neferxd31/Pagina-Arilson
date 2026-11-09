@@ -6,9 +6,12 @@ interface Props {
   title?: string;
   description?: string;
   image?: string;
+  // Path Google should treat as the main version of this page (defaults to the current path, without filters)
+  canonicalPath?: string;
 }
 
-const { title, description = STORE.description, image = '/og-default.jpg' } = Astro.props;
+const { title, description = STORE.description, image = '/og-default.jpg', canonicalPath = Astro.url.pathname } = Astro.props;
+const canonicalUrl = new URL(canonicalPath, Astro.url.origin).href;
 const pageTitle = title ? `${title} | ${STORE.name}` : `${STORE.name} · ${STORE.tagline}`;
 const imageUrl = new URL(image, Astro.url.origin).href;
 const whatsappLink = `https://wa.me/${STORE.whatsappNumber}`;
@@ -42,12 +45,15 @@ function isActive(href: string): boolean {
     <script is:inline>document.documentElement.classList.add('js');</script>
     <meta name="description" content={description} />
     <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content={STORE.name} />
     <meta property="og:title" content={title ?? STORE.name} />
     <meta property="og:description" content={description} />
     <meta property="og:image" content={imageUrl} />
-    <meta property="og:url" content={Astro.url.href} />
+    <meta property="og:url" content={canonicalUrl} />
+    <link rel="canonical" href={canonicalUrl} />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="theme-color" content="#d3fef5" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -117,6 +123,14 @@ function isActive(href: string): boolean {
             <li><a href={STORE.tiktokUrl} target="_blank" rel="noopener">TikTok</a></li>
           </ul>
         </div>
+      </div>
+      <div class="container footer-bottom">
+        <span>© {new Date().getFullYear()} {STORE.name}</span>
+        <nav aria-label="Información legal">
+          <a href="/envios">Envíos y garantías</a>
+          <a href="/terminos">Términos</a>
+          <a href="/privacidad">Privacidad</a>
+        </nav>
       </div>
     </footer>
 
@@ -397,6 +411,24 @@ function isActive(href: string): boolean {
 
   .site-footer a {
     text-decoration: none;
+  }
+
+  .footer-bottom {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 8px 16px;
+    margin-top: 32px;
+    padding-top: 20px;
+    border-top: 1px solid var(--navy-soft);
+    font-size: 0.85rem;
+    color: #b8bcd6;
+  }
+
+  .footer-bottom nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
   }
 
   .site-footer a:hover {

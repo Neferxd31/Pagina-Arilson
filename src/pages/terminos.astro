@@ -1,0 +1,38 @@
+---
+import LegalLayout from '../layouts/LegalLayout.astro';
+import { STORE } from '../config';
+---
+
+<LegalLayout title="Términos y condiciones" description="Las reglas para comprar en EsencialesCol.">
+  <h2>1. Quiénes somos</h2>
+  <p>
+    EsencialesCol es una tienda de tecnología útil con sede en Cúcuta, Colombia, administrada por Arilson Gilberto Contreras Hernández.
+    [Pendiente: cédula o NIT].
+  </p>
+
+  <h2>2. Cómo comprar</h2>
+  <ul>
+    <li>Eliges los productos, colores y cantidades y los agregas al carrito.</li>
+    <li>Al pulsar "Pedir por WhatsApp" se registra tu pedido y se abre un chat con el detalle.</li>
+    <li>La compra se confirma en ese chat, donde acordamos el envío y el pago. Un pedido sin confirmar no aparta el producto.</li>
+  </ul>
+
+  <h2>3. Precios y disponibilidad</h2>
+  <p>
+    Los precios están en pesos colombianos (COP) e incluyen [Pendiente: confirmar si incluyen IVA]. El costo del envío no está incluido y se
+    informa por WhatsApp antes de confirmar. Los precios y el stock pueden cambiar sin previo aviso; siempre se respeta el precio que te
+    confirmemos en el chat.
+  </p>
+
+  <h2>4. Pagos</h2>
+  <p>[Pendiente: medios de pago aceptados]. Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+
+  <h2>5. Envíos, cambios y garantías</h2>
+  <p>Se explican en la página <a href="/envios">Envíos y garantías</a>.</p>
+
+  <h2>6. Ley aplicable</h2>
+  <p>
+    Estas condiciones se rigen por las leyes de Colombia, en especial el Estatuto del Consumidor (Ley 1480 de 2011). Para cualquier duda
+    escríbenos al WhatsApp {STORE.whatsappDisplay}.
+  </p>
+</LegalLayout>

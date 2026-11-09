@@ -18,6 +18,7 @@ export interface CatalogFilters {
   maxPrice: number | null;
   inStock: boolean;
   onSale: boolean;
+  isNew: boolean;
   sort: SortId;
   page: number;
 }
@@ -48,6 +49,7 @@ export function parseCatalogFilters(params: URLSearchParams, categorySlugs: stri
     maxPrice: readPrice(params.get('max')),
     inStock: params.get('disponibles') === '1',
     onSale: params.get('oferta') === '1',
+    isNew: params.get('nuevos') === '1',
     sort: SORT_OPTIONS.some((option) => option.id === sort) ? (sort as SortId) : 'destacados',
     page: Number.isInteger(page) && page > 1 ? page : 1,
   };
@@ -76,6 +78,7 @@ export function buildCatalogQuery(filters: CatalogFilters): { where: string; par
   }
   if (filters.inStock) conditions.push('EXISTS (SELECT 1 FROM variants v WHERE v.product_id = products.id AND v.stock > 0)');
   if (filters.onSale) conditions.push('compare_at_price IS NOT NULL');
+  if (filters.isNew) conditions.push('is_new = 1');
 
   return { where: `WHERE ${conditions.join(' AND ')}`, params, orderBy: ORDER_BY[filters.sort] };
 }
@@ -90,6 +93,7 @@ export function catalogUrl(filters: CatalogFilters, changes: Partial<CatalogFilt
   if (next.maxPrice !== null) params.set('max', String(next.maxPrice));
   if (next.inStock) params.set('disponibles', '1');
   if (next.onSale) params.set('oferta', '1');
+  if (next.isNew) params.set('nuevos', '1');
   if (next.sort !== 'destacados') params.set('orden', next.sort);
   if (next.page > 1) params.set('pagina', String(next.page));
 

@@ -1,0 +1,13 @@
+{
+  "name": "EsencialesCol",
+  "short_name": "EsencialesCol",
+  "description": "Tecnología útil para todos los días",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6fffc",
+  "theme_color": "#d3fef5",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

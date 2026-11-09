@@ -13,19 +13,21 @@ describe('parseCatalogFilters', () => {
       maxPrice: null,
       inStock: false,
       onSale: false,
+      isNew: false,
       sort: 'destacados',
       page: 1,
     });
   });
 
   it('reads every filter', () => {
-    expect(parse('q=audifonos&categoria=celular&min=10000&max=90000&disponibles=1&oferta=1&orden=precio-asc&pagina=3')).toEqual({
+    expect(parse('q=audifonos&categoria=celular&min=10000&max=90000&disponibles=1&oferta=1&nuevos=1&orden=precio-asc&pagina=3')).toEqual({
       search: 'audifonos',
       category: 'celular',
       minPrice: 10000,
       maxPrice: 90000,
       inStock: true,
       onSale: true,
+      isNew: true,
       sort: 'precio-asc',
       page: 3,
     });
@@ -57,6 +59,7 @@ describe('buildCatalogQuery', () => {
     expect(query.where).toContain('price >= ?');
     expect(query.where).toContain('v.stock > 0');
     expect(query.where).toContain('compare_at_price IS NOT NULL');
+    expect(buildCatalogQuery(parse('nuevos=1')).where).toBe('WHERE is_active = 1 AND is_new = 1');
     expect(query.params).toEqual(['%led%', '%led%', '%led%', 'hogar-oficina', 1000]);
     expect(query.orderBy).toBe('price DESC, id DESC');
   });
@@ -68,6 +71,7 @@ describe('catalogUrl', () => {
     expect(catalogUrl(filters, { page: 5 })).toBe('/productos?q=led&categoria=celular&pagina=5');
     expect(catalogUrl(filters, { category: '' })).toBe('/productos?q=led');
     expect(catalogUrl(parse(''))).toBe('/productos');
+    expect(catalogUrl(parse(''), { isNew: true })).toBe('/productos?nuevos=1');
   });
 });
 

@@ -2,6 +2,7 @@
 import { env } from 'cloudflare:workers';
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { getProductById, listCategories, type Product } from '../../../lib/db';
+import { jsonForScript } from '../../../lib/format';
 
 const isNew = Astro.params.id === 'nuevo';
 let product: Product | null = null;
@@ -118,7 +119,7 @@ const initialData = {
     </div>
   </form>
 
-  <script type="application/json" id="initial-data" set:html={JSON.stringify(initialData)} />
+  <script type="application/json" id="initial-data" set:html={jsonForScript(initialData)} />
 </AdminLayout>
 
 <script>
