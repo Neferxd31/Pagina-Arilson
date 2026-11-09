@@ -6,3 +6,5 @@ dist/
 .env
 .env.*
 .netlify/
+# Respaldos de la base de datos: contienen datos de clientes
+backups/

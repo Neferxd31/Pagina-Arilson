@@ -11,7 +11,10 @@ Todo corre en Cloudflare (plan gratis): Workers + D1 (base de datos) + R2 (fotos
   (incluye testimonios) y Contacto.
 - **Admin (`/admin`):** crear/editar productos (fotos, colores con stock propio, precio, oferta, textos de confianza, video),
   administrar categorías, elegir si el producto sale en "Destacados" o "Nuevos" del inicio (las ofertas salen solas
-  cuando hay precio anterior), ver pedidos y confirmarlos. **El stock se descuenta al confirmar**, y se devuelve si un pedido confirmado se cancela.
+  cuando hay precio anterior), ver pedidos y confirmarlos. Incluye panel de resumen (pendientes, agotados, stock bajo),
+  buscador de productos, registro de actividad (quién cambió qué) y limpieza de fotos sin usar.
+- **Seguridad:** login con Cloudflare Access más lista de correos autorizados, verificación de origen en el admin, anti-spam
+  Turnstile, máximo 5 pedidos por hora por conexión y autorización de datos personales (Ley 1581) en cada pedido. **El stock se descuenta al confirmar**, y se devuelve si un pedido confirmado se cancela.
 
 ## Desarrollo local
 
@@ -22,42 +25,14 @@ npm run dev        # http://localhost:4321 (en local /admin no pide login)
 npm test
 ```
 
-## Publicar en Cloudflare (una sola vez)
+## Publicar en Cloudflare
 
-1. Crear cuenta gratis en Cloudflare e iniciar sesión desde la terminal: `npx wrangler login`
-2. Activar R2 en el dashboard (R2 Object Storage). Cloudflare pide un medio de pago aunque el uso esté dentro del plan gratis (10 GB).
-3. Crear la base de datos y el bucket:
-   ```bash
-   npx wrangler d1 create esencialescol
-   npx wrangler r2 bucket create esencialescol-media
-   ```
-   Copiar el `database_id` que imprime el primer comando dentro de `wrangler.jsonc` (en `d1_databases`).
-4. Crear las tablas y publicar:
-   ```bash
-   npm run db:migrate:remote
-   npm run deploy
-   ```
-   La tienda queda en `https://esencialescol.<tu-subdominio>.workers.dev`. `/admin` responde 403 hasta completar el paso 5.
-5. Proteger el admin con Cloudflare Access (Zero Trust, gratis hasta 50 usuarios):
-   - Zero Trust → Access → Applications → *Add an application* → **Self-hosted**.
-   - Destinos: el host `esencialescol.<tu-subdominio>.workers.dev` con las rutas `admin` y `api/admin`.
-   - Política: *Allow* → *Emails* → el correo del administrador. Login por código al correo (One-time PIN).
-   - Copiar el **Application Audience (AUD) Tag** y el team domain (`<equipo>.cloudflareaccess.com`) en `vars` de `wrangler.jsonc`
-     (`ACCESS_AUD` y `ACCESS_TEAM_DOMAIN`) y volver a ejecutar `npm run deploy`.
+La guía completa, paso a paso y con lista para marcar, está en **[DEPLOY.md](DEPLOY.md)**: cuenta, base de datos, login del admin,
+anti-spam, verificación, dominio y mantenimiento.
 
-   El servidor verifica además la firma del token de Access, así que si la aplicación de Access se borra por error, `/admin` queda cerrado (no abierto).
-6. Activar el anti-spam del carrito (Cloudflare Turnstile, gratis). **Sin este paso la tienda rechaza todos los pedidos.**
-   - Dashboard → Turnstile → *Add widget* → hostname de la tienda → modo *Managed*.
-   - Copiar la **Site Key** en `vars` de `wrangler.jsonc` (`TURNSTILE_SITE_KEY`, hoy tiene la clave de prueba de Cloudflare).
-   - Guardar la **Secret Key** como secreto (nunca en el código) y volver a publicar:
-     ```bash
-     npx wrangler secret put TURNSTILE_SECRET_KEY
-     npm run deploy
-     ```
+`npm run deploy` revisa primero la configuración y no publica si falta algo. Para revisarla sin publicar: `npm run check:deploy`.
 
-En local (`npm run dev`) se usan las claves de prueba de Cloudflare: el widget dice "Solo para pruebas" y siempre aprueba.
-
-Cuando haya dominio propio: agregarlo en Workers → *Domains & Routes*, y añadir ese host a la aplicación de Access y al widget de Turnstile.
+En local (`npm run dev`) se usan las claves de prueba de Cloudflare Turnstile: el widget dice "Solo para pruebas" y siempre aprueba.
 
 ## Respaldos de la base de datos
 
@@ -68,10 +43,10 @@ npx wrangler d1 time-travel info esencialescol
 npx wrangler d1 time-travel restore esencialescol --timestamp=2026-10-10T12:00:00Z
 ```
 
-Copia completa en un archivo (recomendado una vez por semana, guardarla fuera del computador):
+Copia completa en `backups/` (recomendado una vez por semana; tiene datos de clientes, no se sube a Git):
 
 ```bash
-npx wrangler d1 export esencialescol --remote --output=respaldo.sql
+npm run db:backup
 ```
 
 ## Vista previa temporal en Netlify
@@ -83,5 +58,4 @@ Netlify la compila sola con `netlify.toml` (`PREVIEW=netlify`). Para probarla en
 PREVIEW=netlify npx astro dev --port 4500
 ```
 
-Para quitarla cuando la tienda esté en Cloudflare: borrar `netlify.toml` y `src/preview/`, quitar el adaptador de Netlify de
-`astro.config.mjs` y desinstalarlo con `npm uninstall @astrojs/netlify`.
+Para quitarla cuando la tienda esté en Cloudflare: ver [DEPLOY.md](DEPLOY.md), fase 6.
