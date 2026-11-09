@@ -7,6 +7,7 @@ interface Props {
 
 const { title } = Astro.props;
 const path = Astro.url.pathname;
+const adminEmail = Astro.locals.adminEmail;
 ---
 
 <!doctype html>
@@ -31,6 +32,11 @@ const path = Astro.url.pathname;
           <a href="/admin/pedidos" class:list={{ active: path.startsWith('/admin/pedidos') }}>Pedidos</a>
           <a href="/" target="_blank">Ver tienda ↗</a>
         </nav>
+        <div class="session">
+          <span title="Sesión iniciada">{adminEmail}</span>
+          {/* Cloudflare Access ends the session at this address; it does not exist in local development */}
+          {!import.meta.env.DEV && <a href="/cdn-cgi/access/logout">Cerrar sesión</a>}
+        </div>
       </div>
     </header>
     <main class="container admin-main">
@@ -81,6 +87,26 @@ const path = Astro.url.pathname;
 
   nav a.active,
   nav a:hover {
+    background: var(--navy-soft);
+  }
+
+  .session {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.8rem;
+    color: var(--mint-strong);
+  }
+
+  .session a {
+    padding: 4px 10px;
+    border: 1px solid var(--navy-soft);
+    border-radius: 999px;
+    color: #fff;
+    text-decoration: none;
+  }
+
+  .session a:hover {
     background: var(--navy-soft);
   }
 

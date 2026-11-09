@@ -20,6 +20,8 @@
     // Cloudflare Access values for the /admin protection, filled in after setup (see README)
     "ACCESS_TEAM_DOMAIN": "",
     "ACCESS_AUD": "",
+    // Correos que pueden entrar al admin, separados por coma. Vacío = nadie entra (ver DEPLOY.md)
+    "ADMIN_EMAILS": "",
     // Turnstile anti-spam on checkout. This is Cloudflare's public test key: replace it with the real one (see README)
     "TURNSTILE_SITE_KEY": "1x00000000000000000000AA"
   }

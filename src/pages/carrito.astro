@@ -39,6 +39,14 @@ import Layout from '../layouts/Layout.astro';
           <textarea name="notes" maxlength="300" rows="2"></textarea>
         </label>
 
+        <label class="consent">
+          <input type="checkbox" name="acceptsPrivacy" required />
+          <span>
+            Autorizo el tratamiento de mis datos personales para gestionar mi pedido, según la{' '}
+            <a href="/privacidad" target="_blank">Política de privacidad</a>.
+          </span>
+        </label>
+
         <div class="cf-turnstile" data-sitekey={env.TURNSTILE_SITE_KEY} data-language="es" data-theme="light" data-size="flexible"></div>
 
         <div id="checkout-errors" class="alert" hidden></div>
@@ -140,7 +148,9 @@ import Layout from '../layouts/Layout.astro';
 
     const formData = new FormData(form);
     const turnstileToken = String(formData.get('cf-turnstile-response') ?? '');
+    const acceptsPrivacy = formData.get('acceptsPrivacy') === 'on';
     formData.delete('cf-turnstile-response');
+    formData.delete('acceptsPrivacy');
     if (!turnstileToken) {
       showErrors(['Espera un momento a que termine la verificación de seguridad.']);
       return;
@@ -157,6 +167,7 @@ import Layout from '../layouts/Layout.astro';
           customer: Object.fromEntries(formData),
           items: cart.map((line) => ({ variantId: line.variantId, qty: line.qty })),
           turnstileToken,
+          acceptsPrivacy,
         }),
       });
       const result = (await response.json()) as { whatsappUrl?: string; errors?: string[] };
@@ -311,6 +322,23 @@ import Layout from '../layouts/Layout.astro';
     display: flex;
     justify-content: space-between;
     font-size: 1.15rem;
+  }
+
+  .consent {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    font-size: 0.85rem;
+    color: var(--muted);
+    cursor: pointer;
+  }
+
+  .consent input {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    accent-color: var(--navy);
   }
 
   .checkout .hint {

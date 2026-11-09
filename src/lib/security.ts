@@ -24,3 +24,11 @@ export function applySecurityHeaders(headers: Headers, options: { isDev: boolean
   if (!options.isDev) headers.set('Content-Security-Policy', CONTENT_SECURITY_POLICY);
   if (options.isHttps) headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
 }
+
+const SAFE_METHODS = ['GET', 'HEAD', 'OPTIONS'];
+
+// Admin actions only run when the browser says they come from our own pages (blocks requests forged by other sites)
+export function isSameOriginRequest(method: string, originHeader: string | null, expectedOrigin: string): boolean {
+  if (SAFE_METHODS.includes(method.toUpperCase())) return true;
+  return originHeader === expectedOrigin;
+}

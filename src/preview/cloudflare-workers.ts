@@ -4,6 +4,7 @@
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 import initMigration from '../../migrations/0001_init.sql?raw';
 import categoriesMigration from '../../migrations/0002_categories_and_sections.sql?raw';
+import securityMigration from '../../migrations/0003_security_and_activity.sql?raw';
 import { DEV_TEST_SECRET } from '../lib/turnstile';
 import { SAMPLE_PRODUCTS, SAMPLE_TEXT } from './sample-products';
 
@@ -61,6 +62,7 @@ function createSampleDatabase(): DatabaseSync {
   const sqlite = new DatabaseSync(':memory:');
   sqlite.exec(initMigration);
   sqlite.exec(categoriesMigration);
+  sqlite.exec(securityMigration);
 
   const insertProduct = sqlite.prepare(
     `INSERT INTO products (slug, title, category, price, compare_at_price, short_description, how_to_use, specs, warranty,
@@ -104,6 +106,7 @@ export const env = {
   // Empty Access values keep /admin closed (403) in the preview
   ACCESS_TEAM_DOMAIN: '',
   ACCESS_AUD: '',
+  ADMIN_EMAILS: '',
   // Cloudflare's public Turnstile test keys: always pass and show "Solo para pruebas"
   TURNSTILE_SITE_KEY: '1x00000000000000000000AA',
   TURNSTILE_SECRET_KEY: DEV_TEST_SECRET,

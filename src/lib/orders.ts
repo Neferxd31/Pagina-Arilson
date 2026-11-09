@@ -49,6 +49,9 @@ export function parseOrderRequest(body: unknown): Result<{ items: OrderRequestIt
     notes: readText(customerSource, 'notes', 'las notas', { max: 300 }, errors),
   };
 
+  // Ley 1581 de 2012: sin autorización del cliente no se pueden guardar sus datos
+  if (source.acceptsPrivacy !== true) errors.push('Debes autorizar el tratamiento de tus datos personales para hacer el pedido.');
+
   const rawItems = Array.isArray(source.items) ? source.items : [];
   if (rawItems.length === 0) errors.push('El carrito está vacío.');
   if (rawItems.length > MAX_LINES) errors.push(`El pedido no puede tener más de ${MAX_LINES} productos distintos.`);

@@ -1,15 +1,16 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
+import { recordAdminChange } from '../../../../lib/admin-log';
 import { getOrder, getVariantsForOrder, setOrderStatus } from '../../../../lib/db';
-import { stockChanges, type OrderStatus } from '../../../../lib/orders';
+import { orderCode, stockChanges, type OrderStatus } from '../../../../lib/orders';
 
 const STATUSES: OrderStatus[] = ['pending', 'confirmed', 'cancelled'];
 
-export const PATCH: APIRoute = async ({ params, request }) => {
-  const order = await getOrder(env.DB, Number(params.id));
+export const PATCH: APIRoute = async (context) => {
+  const order = await getOrder(env.DB, Number(context.params.id));
   if (!order) return Response.json({ errors: ['El pedido no existe.'] }, { status: 404 });
 
-  const body = (await request.json().catch(() => null)) as { status?: OrderStatus } | null;
+  const body = (await context.request.json().catch(() => null)) as { status?: OrderStatus } | null;
   const status = body?.status;
   if (!status || !STATUSES.includes(status)) return Response.json({ errors: ['Estado inválido.'] }, { status: 400 });
 
@@ -26,5 +27,6 @@ export const PATCH: APIRoute = async ({ params, request }) => {
   }
 
   await setOrderStatus(env.DB, order.id, status, changes);
+  await recordAdminChange(context, status === 'confirmed' ? 'order.confirmed' : 'order.cancelled', orderCode(order.id));
   return Response.json({ id: order.id, status });
 };

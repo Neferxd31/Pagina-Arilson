@@ -12,7 +12,14 @@ const variants: VariantForOrder[] = [
 
 describe('parseOrderRequest', () => {
   it('accepts a valid request and merges repeated colors', () => {
-    const result = parseOrderRequest({ customer, items: [{ variantId: 1, qty: 1 }, { variantId: 1, qty: 2 }] });
+    const result = parseOrderRequest({
+      customer,
+      acceptsPrivacy: true,
+      items: [
+        { variantId: 1, qty: 1 },
+        { variantId: 1, qty: 2 },
+      ],
+    });
     expect(result).toEqual({ ok: true, customer, items: [{ variantId: 1, qty: 3 }] });
   });
 
@@ -26,8 +33,14 @@ describe('parseOrderRequest', () => {
   });
 
   it('rejects invalid quantities', () => {
-    const result = parseOrderRequest({ customer, items: [{ variantId: 1, qty: 0 }] });
+    const result = parseOrderRequest({ customer, acceptsPrivacy: true, items: [{ variantId: 1, qty: 0 }] });
     expect(result.ok).toBe(false);
+  });
+
+  it('requires the personal data authorization (Ley 1581)', () => {
+    const result = parseOrderRequest({ customer, items: [{ variantId: 1, qty: 1 }] });
+    expect(result).toEqual({ ok: false, errors: ['Debes autorizar el tratamiento de tus datos personales para hacer el pedido.'] });
+    expect(parseOrderRequest({ customer, acceptsPrivacy: 'on', items: [{ variantId: 1, qty: 1 }] }).ok).toBe(false);
   });
 
   it('rejects garbage bodies', () => {

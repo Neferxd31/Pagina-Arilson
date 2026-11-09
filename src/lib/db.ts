@@ -341,7 +341,10 @@ export async function createOrder(
   order: { customerName: string; city: string; address: string; notes: string; items: OrderLine[]; total: number },
 ): Promise<number> {
   const row = await db
-    .prepare('INSERT INTO orders (customer_name, city, address, notes, items, total) VALUES (?, ?, ?, ?, ?, ?) RETURNING id')
+    .prepare(
+      `INSERT INTO orders (customer_name, city, address, notes, items, total, privacy_accepted_at)
+       VALUES (?, ?, ?, ?, ?, ?, datetime('now')) RETURNING id`,
+    )
     .bind(order.customerName, order.city, order.address, order.notes, JSON.stringify(order.items), order.total)
     .first<{ id: number }>();
   return row!.id;
@@ -371,4 +374,40 @@ export async function setOrderStatus(
     db.prepare('UPDATE variants SET stock = MAX(stock + ?, 0) WHERE id = ?').bind(change.delta, change.variantId),
   );
   await db.batch([db.prepare('UPDATE orders SET status = ? WHERE id = ?').bind(status, id), ...stockStatements]);
+}
+
+export interface ActivityEntry {
+  id: number;
+  actor: string;
+  action: string;
+  target: string;
+  createdAt: string;
+}
+
+export async function logActivity(db: D1Database, actor: string, action: string, target: string): Promise<void> {
+  await db.prepare('INSERT INTO activity_log (actor, action, target) VALUES (?, ?, ?)').bind(actor, action, target).run();
+}
+
+export async function listActivity(db: D1Database, limit: number): Promise<ActivityEntry[]> {
+  const { results } = await db
+    .prepare('SELECT * FROM activity_log ORDER BY id DESC LIMIT ?')
+    .bind(limit)
+    .all<{ id: number; actor: string; action: string; target: string; created_at: string }>();
+  return results.map((row) => ({ id: row.id, actor: row.actor, action: row.action, target: row.target, createdAt: row.created_at }));
+}
+
+export async function countRecentOrderAttempts(db: D1Database, ipHash: string): Promise<number> {
+  const row = await db
+    .prepare("SELECT COUNT(*) AS total FROM order_attempts WHERE ip_hash = ? AND created_at > datetime('now', '-1 hour')")
+    .bind(ipHash)
+    .first<{ total: number }>();
+  return row?.total ?? 0;
+}
+
+// Old fingerprints are deleted on every insert, so the table never keeps more than the last hour
+export async function recordOrderAttempt(db: D1Database, ipHash: string): Promise<void> {
+  await db.batch([
+    db.prepare("DELETE FROM order_attempts WHERE created_at <= datetime('now', '-1 hour')"),
+    db.prepare('INSERT INTO order_attempts (ip_hash) VALUES (?)').bind(ipHash),
+  ]);
 }
