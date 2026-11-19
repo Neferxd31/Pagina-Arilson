@@ -1,6 +1,7 @@
 ---
 import { env } from 'cloudflare:workers';
 import Layout from '../../layouts/Layout.astro';
+import { CATALOG_ONLY } from '../../lib/catalog';
 import { getProductBySlug, listCategories } from '../../lib/db';
 import { formatPrice, imageUrl } from '../../lib/format';
 import { videoEmbedUrl } from '../../lib/video';
@@ -14,7 +15,9 @@ const images = product.images.length > 0 ? product.images : [''];
 const embedUrl = product.videoUrl ? videoEmbedUrl(product.videoUrl) : null;
 const showColorPicker = product.variants.length > 1;
 const firstInStock = product.variants.find((variant) => variant.stock > 0) ?? product.variants[0];
-const shareDescription = `${formatPrice(product.price)} · ${product.shortDescription || categoryName}`;
+const priceLabel = product.price > 0 ? formatPrice(product.price) : 'Consultar precio';
+const shareDescription = `${priceLabel} · ${product.shortDescription || categoryName}`;
+const { suggestedPrice, priceTiers = [] } = product.catalogDetails ?? {};
 
 const clientData = {
   slug: product.slug,
@@ -51,7 +54,7 @@ const clientData = {
       <div class="info">
         <h1>{product.title}</h1>
         <p class="product-price">
-          <span class="price">{formatPrice(product.price)}</span>
+          <span class="price">{priceLabel}</span>
           {product.compareAtPrice && <span class="price-old">{formatPrice(product.compareAtPrice)}</span>}
         </p>
         {product.shortDescription && <p class="short">{product.shortDescription}</p>}
@@ -79,7 +82,24 @@ const clientData = {
           )
         }
 
-        <p class="stock" id="stock-label"></p>
+        {suggestedPrice && <p class="text">Precio sugerido {formatPrice(suggestedPrice)}</p>}
+        {
+          priceTiers.length > 1 && (
+            <section aria-labelledby="quantity-prices">
+              <h2 id="quantity-prices">Precios por cantidad</h2>
+              <table class="quantity-prices">
+                <thead><tr><th scope="col">Cantidad</th><th scope="col">Precio por unidad</th></tr></thead>
+                <tbody>
+                  {priceTiers.map(({ quantity, unitPrice }) => (
+                    <tr><td>{quantity}</td><td>{formatPrice(unitPrice)}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          )
+        }
+
+        <p class="stock" id="stock-label">{CATALOG_ONLY ? 'Disponibilidad por confirmar en WhatsApp' : ''}</p>
 
         <div class="buy">
           <div class="qty">
@@ -138,11 +158,12 @@ const clientData = {
     </div>
   </article>
 
-  <script type="application/json" id="product-data" set:html={JSON.stringify(clientData)} />
+  <script type="application/json" id="product-data" set:html={JSON.stringify(clientData).replace(/</g, '\\u003c')} />
 </Layout>
 
 <script>
   import { addToCart } from '../../lib/cart';
+  import { CATALOG_ONLY } from '../../lib/catalog';
   import type { Variant } from '../../lib/db';
   import { imageUrl } from '../../lib/format';
   import { loadCart, saveCart } from '../../scripts/cart-store';
@@ -176,10 +197,12 @@ const clientData = {
     qtyOutput.textContent = String(qty);
     addButton.disabled = available < 1;
 
-    if (selected.stock === 0) stockLabel.textContent = 'Agotado en este color';
-    else if (available < 1) stockLabel.textContent = 'Ya tienes en el carrito todas las unidades disponibles';
-    else if (selected.stock <= 5) stockLabel.textContent = `¡Últimas ${selected.stock} unidades!`;
-    else stockLabel.textContent = 'Disponible';
+    if (!CATALOG_ONLY) {
+      if (selected.stock === 0) stockLabel.textContent = 'Agotado en este color';
+      else if (available < 1) stockLabel.textContent = 'Ya tienes en el carrito todas las unidades disponibles';
+      else if (selected.stock <= 5) stockLabel.textContent = `¡Últimas ${selected.stock} unidades!`;
+      else stockLabel.textContent = 'Disponible';
+    }
 
     const colorName = document.getElementById('color-name');
     if (colorName) colorName.textContent = selected.colorName;
@@ -224,7 +247,7 @@ const clientData = {
       maxStock: selected.stock,
     };
     saveCart(addToCart(loadCart(), item, qty));
-    feedback.innerHTML = `Agregado al carrito. <a href="/carrito">Ir a pagar</a>`;
+    feedback.innerHTML = `Agregado al carrito. <a href="/carrito">${CATALOG_ONLY ? 'Ver carrito' : 'Ir a pagar'}</a>`;
     qty = 1;
     render();
   });
@@ -243,6 +266,21 @@ const clientData = {
 </script>
 
 <style>
+  .quantity-prices {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+  }
+
+  .quantity-prices :is(th, td) {
+    padding: 7px 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .quantity-prices :is(th, td):last-child {
+    text-align: right;
+  }
+
   .product {
     padding-top: 16px;
   }

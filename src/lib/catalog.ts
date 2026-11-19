@@ -1,6 +1,7 @@
 import { asSource, readInteger, readText } from './fields';
 
 export const PAGE_SIZE = 24;
+export const CATALOG_ONLY = import.meta.env.PUBLIC_CATALOG_ONLY === 'true';
 
 export const SORT_OPTIONS = [
   { id: 'destacados', label: 'Destacados' },
@@ -66,6 +67,7 @@ export function buildCatalogQuery(filters: CatalogFilters): { where: string; par
     conditions.push('category = ?');
     params.push(filters.category);
   }
+  if (CATALOG_ONLY && (filters.minPrice !== null || filters.maxPrice !== null)) conditions.push('price > 0');
   if (filters.minPrice !== null) {
     conditions.push('price >= ?');
     params.push(filters.minPrice);
@@ -77,7 +79,9 @@ export function buildCatalogQuery(filters: CatalogFilters): { where: string; par
   if (filters.inStock) conditions.push('EXISTS (SELECT 1 FROM variants v WHERE v.product_id = products.id AND v.stock > 0)');
   if (filters.onSale) conditions.push('compare_at_price IS NOT NULL');
 
-  return { where: `WHERE ${conditions.join(' AND ')}`, params, orderBy: ORDER_BY[filters.sort] };
+  const orderBy = ORDER_BY[filters.sort];
+  const unknownPricesLast = CATALOG_ONLY && filters.sort === 'precio-asc';
+  return { where: `WHERE ${conditions.join(' AND ')}`, params, orderBy: unknownPricesLast ? `(price = 0) ASC, ${orderBy}` : orderBy };
 }
 
 // Builds a /productos link keeping the current filters, used by pagination and "remove filter" chips

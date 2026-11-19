@@ -1,13 +1,22 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { STORE } from '../../config';
+import { CATALOG_ONLY } from '../../lib/catalog';
 import { createOrder, getVariantsForOrder } from '../../lib/db';
-import { orderCode, parseOrderRequest, priceOrder } from '../../lib/orders';
+import { orderCode, parseOrderItems, parseOrderRequest, priceOrder } from '../../lib/orders';
 import { DEV_TEST_SECRET, verifyTurnstile } from '../../lib/turnstile';
-import { buildOrderMessage, whatsappUrl } from '../../lib/whatsapp';
+import { buildOrderMessage, buildQuoteMessage, whatsappUrl } from '../../lib/whatsapp';
 
 export const POST: APIRoute = async ({ request }) => {
-  const body = (await request.json().catch(() => null)) as { turnstileToken?: unknown } | null;
+  const body = (await request.json().catch(() => null)) as { items?: unknown; turnstileToken?: unknown } | null;
+  if (CATALOG_ONLY) {
+    const parsed = parseOrderItems(body?.items);
+    if (!parsed.ok) return Response.json({ errors: parsed.errors }, { status: 400 });
+    const variants = await getVariantsForOrder(env.DB, parsed.items.map((item) => item.variantId));
+    const priced = priceOrder(parsed.items, variants);
+    if (!priced.ok) return Response.json({ errors: priced.errors }, { status: 409 });
+    return Response.json({ whatsappUrl: whatsappUrl(STORE.whatsappNumber, buildQuoteMessage(priced.lines)) });
+  }
   const parsed = parseOrderRequest(body);
   if (!parsed.ok) return Response.json({ errors: parsed.errors }, { status: 400 });
 

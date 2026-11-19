@@ -1,110 +1,118 @@
-// Vista previa temporal en Netlify: reemplaza el módulo `cloudflare:workers` (solo con PREVIEW=netlify).
-// D1 se simula con SQLite en memoria creado desde las mismas migraciones, y se llena con productos de ejemplo.
-// Los datos se reinician cada vez que Netlify arranca la función: nada de lo que pase aquí se guarda.
+// En Netlify, SQLite permite reutilizar las consultas del catálogo que ya usa la tienda.
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 import initMigration from '../../migrations/0001_init.sql?raw';
 import categoriesMigration from '../../migrations/0002_categories_and_sections.sql?raw';
-import { DEV_TEST_SECRET } from '../lib/turnstile';
-import { SAMPLE_PRODUCTS, SAMPLE_TEXT } from './sample-products';
+import { MAX_ORDER_QUANTITY } from '../lib/orders';
+import { CATEGORIES, loadCatalog, type CatalogRecord } from './supabase-catalog';
 
 class PreviewStatement {
   constructor(
-    private readonly sqlite: DatabaseSync,
+    private readonly database: () => Promise<DatabaseSync>,
     private readonly sql: string,
     private readonly params: SQLInputValue[] = [],
   ) {}
 
   bind(...params: SQLInputValue[]) {
-    return new PreviewStatement(this.sqlite, this.sql, params);
+    return new PreviewStatement(this.database, this.sql, params);
   }
 
-  rows() {
-    return this.sqlite.prepare(this.sql).all(...this.params);
+  rows(sqlite: DatabaseSync) {
+    return sqlite.prepare(this.sql).all(...this.params);
   }
 
   async all() {
-    return { results: this.rows() };
+    return { results: this.rows(await this.database()) };
   }
 
   async first() {
-    return this.sqlite.prepare(this.sql).get(...this.params) ?? null;
+    return (await this.database()).prepare(this.sql).get(...this.params) ?? null;
   }
 
   async run() {
-    this.sqlite.prepare(this.sql).run(...this.params);
+    (await this.database()).prepare(this.sql).run(...this.params);
     return { success: true };
   }
 }
 
 // Only the subset of the D1 API that src/lib/db.ts uses
 class PreviewDatabase {
-  constructor(private readonly sqlite: DatabaseSync) {}
+  private snapshot?: Promise<DatabaseSync>;
+  private refreshAt = 0;
+
+  private database = () => {
+    if (!this.snapshot || Date.now() >= this.refreshAt) {
+      this.refreshAt = Date.now() + 60_000;
+      this.snapshot = loadCatalog().then(createCatalogDatabase);
+    }
+    return this.snapshot;
+  };
 
   prepare(sql: string) {
-    return new PreviewStatement(this.sqlite, sql);
+    return new PreviewStatement(this.database, sql);
   }
 
   async batch(statements: PreviewStatement[]) {
-    this.sqlite.exec('BEGIN');
+    const sqlite = await this.database();
+    sqlite.exec('BEGIN');
     try {
-      const results = statements.map((statement) => ({ results: statement.rows() }));
-      this.sqlite.exec('COMMIT');
+      const results = statements.map((statement) => ({ results: statement.rows(sqlite) }));
+      sqlite.exec('COMMIT');
       return results;
     } catch (error) {
-      this.sqlite.exec('ROLLBACK');
+      sqlite.exec('ROLLBACK');
       throw error;
     }
   }
 }
 
-function createSampleDatabase(): DatabaseSync {
+function createCatalogDatabase(products: CatalogRecord[]): DatabaseSync {
   const sqlite = new DatabaseSync(':memory:');
   sqlite.exec(initMigration);
   sqlite.exec(categoriesMigration);
+  sqlite.exec('DELETE FROM categories; ALTER TABLE products ADD COLUMN catalog_details TEXT;');
+  const insertCategory = sqlite.prepare('INSERT INTO categories (slug, name, position) VALUES (?, ?, ?)');
+  Object.entries(CATEGORIES).forEach(([slug, name], position) => insertCategory.run(slug, name, position));
 
   const insertProduct = sqlite.prepare(
-    `INSERT INTO products (slug, title, category, price, compare_at_price, short_description, how_to_use, specs, warranty,
-      is_active, is_featured, is_new) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?) RETURNING id`,
+    `INSERT INTO products (id, slug, title, category, price, short_description, specs, images, is_featured, catalog_details)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   );
   const insertVariant = sqlite.prepare(
-    'INSERT INTO variants (product_id, color_name, color_hex, stock, position) VALUES (?, ?, ?, ?, ?)',
+    'INSERT INTO variants (id, product_id, color_name, stock) VALUES (?, ?, ?, ?)',
   );
 
-  SAMPLE_PRODUCTS.forEach((product, index) => {
-    const slug = `ejemplo-${index + 1}`;
-    const { id } = insertProduct.get(
-      slug,
+  for (const product of products) {
+    insertProduct.run(
+      product.id,
+      product.slug,
       product.title,
       product.category,
-      product.price,
-      product.compareAtPrice ?? null,
-      SAMPLE_TEXT.short,
-      SAMPLE_TEXT.long,
-      SAMPLE_TEXT.long,
-      SAMPLE_TEXT.short,
+      product.price ?? 0,
+      product.description,
+      product.note,
+      JSON.stringify([`catalogo/${product.slug}.jpg`]),
       product.featured ? 1 : 0,
-      product.isNew ? 1 : 0,
-    ) as { id: number };
-    product.colors.forEach(([name, hex, stock], position) => insertVariant.run(id, name, hex, stock, position));
-  });
+      JSON.stringify({ suggestedPrice: product.suggested_price, priceTiers: product.price_tiers }),
+    );
+    // Una variante por referencia. El máximo sirve para cotizar cantidades, no representa inventario.
+    insertVariant.run(product.id, product.id, '', MAX_ORDER_QUANTITY);
+  }
 
   return sqlite;
 }
 
 export const env = {
-  DB: new PreviewDatabase(createSampleDatabase()) as unknown as D1Database,
-  // No photo storage in the preview: products show the logo placeholder
+  DB: new PreviewDatabase() as unknown as D1Database,
+  // Las imágenes del catálogo se sirven directamente como archivos estáticos.
   MEDIA: {
     get: async () => null,
     put: async () => {
-      throw new Error('La vista previa no guarda fotos');
+      throw new Error('El catálogo de Netlify usa fotos estáticas');
     },
     delete: async () => undefined,
   } as unknown as R2Bucket,
-  // Empty Access values keep /admin closed (403) in the preview
   ACCESS_TEAM_DOMAIN: '',
   ACCESS_AUD: '',
-  // Cloudflare's public Turnstile test keys: always pass and show "Solo para pruebas"
-  TURNSTILE_SITE_KEY: '1x00000000000000000000AA',
-  TURNSTILE_SECRET_KEY: DEV_TEST_SECRET,
+  TURNSTILE_SITE_KEY: '',
+  TURNSTILE_SECRET_KEY: undefined,
 };

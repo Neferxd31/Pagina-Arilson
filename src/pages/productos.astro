@@ -2,7 +2,7 @@
 import { env } from 'cloudflare:workers';
 import ProductCard from '../components/ProductCard.astro';
 import Layout from '../layouts/Layout.astro';
-import { catalogUrl, PAGE_SIZE, parseCatalogFilters, SORT_OPTIONS } from '../lib/catalog';
+import { CATALOG_ONLY, catalogUrl, PAGE_SIZE, parseCatalogFilters, SORT_OPTIONS } from '../lib/catalog';
 import { listCategories, searchProducts } from '../lib/db';
 import { formatPrice } from '../lib/format';
 
@@ -11,6 +11,10 @@ const filters = parseCatalogFilters(
   Astro.url.searchParams,
   categories.map((category) => category.slug),
 );
+if (CATALOG_ONLY) {
+  filters.inStock = false;
+  filters.onSale = false;
+}
 const { products, total } = await searchProducts(env.DB, filters);
 
 const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -36,7 +40,7 @@ const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1).
     <div class="container">
       <p class="eyebrow">Catálogo</p>
       <h1>{currentCategory ? currentCategory.name : 'Todos los productos'}</h1>
-      <p class="section-lead">Tecnología útil, elegida con criterio. Filtra por categoría, precio o disponibilidad.</p>
+      <p class="section-lead">Tecnología útil, elegida con criterio. Filtra por {CATALOG_ONLY ? 'categoría y precio' : 'categoría, precio o disponibilidad'}.</p>
     </div>
   </section>
 
@@ -74,16 +78,16 @@ const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1).
           <div class="price-range">
             <label class="field">
               <span class="hint">Desde</span>
-              <input name="min" type="number" inputmode="numeric" min="0" step="1000" value={filters.minPrice ?? ''} placeholder="0" />
+              <input name="min" type="number" inputmode="numeric" min="0" step="1" value={filters.minPrice ?? ''} placeholder="0" />
             </label>
             <label class="field">
               <span class="hint">Hasta</span>
-              <input name="max" type="number" inputmode="numeric" min="0" step="1000" value={filters.maxPrice ?? ''} placeholder="Sin límite" />
+              <input name="max" type="number" inputmode="numeric" min="0" step="1" value={filters.maxPrice ?? ''} placeholder="Sin límite" />
             </label>
           </div>
         </fieldset>
 
-        <fieldset>
+        {!CATALOG_ONLY && <fieldset>
           <legend>Mostrar</legend>
           <label class="option">
             <input type="checkbox" name="disponibles" value="1" checked={filters.inStock} />
@@ -93,7 +97,7 @@ const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1).
             <input type="checkbox" name="oferta" value="1" checked={filters.onSale} />
             Solo en oferta
           </label>
-        </fieldset>
+        </fieldset>}
 
         <div class="filter-actions">
           <button type="submit" class="btn btn-small">Aplicar filtros</button>

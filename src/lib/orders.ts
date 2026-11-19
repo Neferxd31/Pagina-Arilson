@@ -35,7 +35,7 @@ export type OrderStatus = 'pending' | 'confirmed' | 'cancelled';
 type Result<T> = ({ ok: true } & T) | { ok: false; errors: string[] };
 
 const MAX_LINES = 50;
-const MAX_QTY = 999;
+export const MAX_ORDER_QUANTITY = 999;
 
 export function parseOrderRequest(body: unknown): Result<{ items: OrderRequestItem[]; customer: Customer }> {
   const source = asSource(body);
@@ -48,8 +48,15 @@ export function parseOrderRequest(body: unknown): Result<{ items: OrderRequestIt
     address: readText(customerSource, 'address', 'la dirección', { max: 160, required: true }, errors),
     notes: readText(customerSource, 'notes', 'las notas', { max: 300 }, errors),
   };
+  const parsed = parseOrderItems(source.items);
+  if (!parsed.ok) errors.push(...parsed.errors);
+  if (errors.length > 0 || !parsed.ok) return { ok: false, errors: [...new Set(errors)] };
+  return { ok: true, items: parsed.items, customer };
+}
 
-  const rawItems = Array.isArray(source.items) ? source.items : [];
+export function parseOrderItems(body: unknown): Result<{ items: OrderRequestItem[] }> {
+  const errors: string[] = [];
+  const rawItems = Array.isArray(body) ? body : [];
   if (rawItems.length === 0) errors.push('El carrito está vacío.');
   if (rawItems.length > MAX_LINES) errors.push(`El pedido no puede tener más de ${MAX_LINES} productos distintos.`);
 
@@ -57,14 +64,16 @@ export function parseOrderRequest(body: unknown): Result<{ items: OrderRequestIt
   for (const rawItem of rawItems.slice(0, MAX_LINES)) {
     const itemSource = asSource(rawItem);
     const variantId = readInteger(itemSource, 'variantId', 'el producto', { min: 1, max: Number.MAX_SAFE_INTEGER }, errors);
-    const qty = readInteger(itemSource, 'qty', 'la cantidad', { min: 1, max: MAX_QTY }, errors);
-    quantities.set(variantId, (quantities.get(variantId) ?? 0) + qty);
+    const qty = readInteger(itemSource, 'qty', 'la cantidad', { min: 1, max: MAX_ORDER_QUANTITY }, errors);
+    const totalQty = (quantities.get(variantId) ?? 0) + qty;
+    if (totalQty > MAX_ORDER_QUANTITY) errors.push(`El máximo por producto es de ${MAX_ORDER_QUANTITY} unidades.`);
+    quantities.set(variantId, totalQty);
   }
 
   if (errors.length > 0) return { ok: false, errors: [...new Set(errors)] };
 
   const items = [...quantities].map(([variantId, qty]) => ({ variantId, qty }));
-  return { ok: true, items, customer };
+  return { ok: true, items };
 }
 
 // El precio siempre sale de la base de datos; el carrito del navegador solo aporta cantidades

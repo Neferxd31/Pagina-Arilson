@@ -1,6 +1,7 @@
 import { defineMiddleware } from 'astro:middleware';
 import { env } from 'cloudflare:workers';
 import { isAccessAuthorized } from './lib/auth';
+import { CATALOG_ONLY } from './lib/catalog';
 import { applySecurityHeaders } from './lib/security';
 
 function isAdminPath(pathname: string): boolean {
@@ -11,6 +12,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const isAdmin = isAdminPath(context.url.pathname);
 
   // Local development has no Cloudflare Access in front of it
+  if (isAdmin && CATALOG_ONLY) return new Response('No autorizado', { status: 403 });
   if (isAdmin && !import.meta.env.DEV) {
     const authorized = await isAccessAuthorized(context.request, env.ACCESS_TEAM_DOMAIN, env.ACCESS_AUD);
     if (!authorized) return new Response('No autorizado', { status: 403 });

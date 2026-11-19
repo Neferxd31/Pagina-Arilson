@@ -28,6 +28,16 @@ export function buildContactMessage(name: string, message: string): string {
   return `¡Hola EsencialesCol! Soy ${name.trim()}.\n\n${message.trim()}`;
 }
 
+export function buildQuoteMessage(lines: OrderLine[]): string {
+  return [
+    '¡Hola EsencialesCol! Quisiera cotizar estos productos:',
+    '',
+    ...lines.map((line) => `• ${line.qty} × ${line.title}`),
+    '',
+    '¿Me confirman precio, disponibilidad y envío? Gracias.',
+  ].join('\n');
+}
+
 export function whatsappUrl(phoneNumber: string, message: string): string {
   return `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
 }
