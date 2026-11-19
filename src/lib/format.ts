@@ -31,5 +31,6 @@ export function uniqueSlug(base: string, takenSlugs: string[]): string {
 }
 
 export function imageUrl(key: string): string {
+  if (/^catalogo\/[a-z0-9-]+\.jpg$/.test(key)) return `/${key}`;
   return key ? `/img/${key}` : '/logo.png';
 }

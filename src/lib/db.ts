@@ -29,6 +29,10 @@ export interface Product {
   isFeatured: boolean;
   isNew: boolean;
   variants: Variant[];
+  catalogDetails?: {
+    suggestedPrice: number | null;
+    priceTiers: { quantity: number; unitPrice: number }[];
+  };
 }
 
 export interface Category {
@@ -70,6 +74,7 @@ interface ProductRow {
   is_active: number;
   is_featured: number;
   is_new: number;
+  catalog_details?: string;
 }
 
 interface VariantRow {
@@ -116,6 +121,7 @@ function toProduct(row: ProductRow, variants: VariantRow[]): Product {
     isFeatured: row.is_featured === 1,
     isNew: row.is_new === 1,
     variants: variants.filter((variant) => variant.product_id === row.id).map(toVariant),
+    ...(row.catalog_details ? { catalogDetails: JSON.parse(row.catalog_details) as Product['catalogDetails'] } : {}),
   };
 }
 

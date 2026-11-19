@@ -1,6 +1,7 @@
 import { cartCount, type CartItem } from '../lib/cart';
+import { CATALOG_ONLY } from '../lib/catalog';
 
-const STORAGE_KEY = 'esencialescol-cart';
+const STORAGE_KEY = CATALOG_ONLY ? 'esencialescol-catalog-cart' : 'esencialescol-cart';
 
 export function loadCart(): CartItem[] {
   try {

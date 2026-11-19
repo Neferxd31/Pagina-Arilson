@@ -1,5 +1,6 @@
 ---
 import type { Product } from '../lib/db';
+import { CATALOG_ONLY } from '../lib/catalog';
 import { formatPrice, imageUrl } from '../lib/format';
 
 interface Props {
@@ -21,7 +22,7 @@ const colors = product.variants.filter((variant) => variant.colorHex);
       height="400"
       class:list={{ placeholder: product.images.length === 0 }}
     />
-    {totalStock === 0 && <span class="badge badge-out">Agotado</span>}
+    {!CATALOG_ONLY && totalStock === 0 && <span class="badge badge-out">Agotado</span>}
     {totalStock > 0 && product.compareAtPrice && <span class="badge">Oferta</span>}
     {totalStock > 0 && !product.compareAtPrice && product.isNew && <span class="badge badge-new">Nuevo</span>}
   </div>
@@ -37,7 +38,7 @@ const colors = product.variants.filter((variant) => variant.colorHex);
       )
     }
     <p class="card-price">
-      <span class="price">{formatPrice(product.price)}</span>
+      <span class="price">{product.price > 0 ? formatPrice(product.price) : 'Consultar precio'}</span>
       {product.compareAtPrice && <span class="price-old">{formatPrice(product.compareAtPrice)}</span>}
     </p>
   </div>

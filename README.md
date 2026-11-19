@@ -74,14 +74,21 @@ Copia completa en un archivo (recomendado una vez por semana, guardarla fuera de
 npx wrangler d1 export esencialescol --remote --output=respaldo.sql
 ```
 
-## Vista previa temporal en Netlify
+## Catálogo en Netlify con Supabase
 
-Solo para mostrar el diseño: usa productos de ejemplo en memoria (nada se guarda), el admin está cerrado y no hay fotos.
-Netlify la compila sola con `netlify.toml` (`PREVIEW=netlify`). Para probarla en local:
+Netlify usa `PREVIEW=netlify` y lee el catálogo de Supabase con `VITE_SUPABASE_URL` y
+`VITE_SUPABASE_PUBLISHABLE_KEY`. Carga [la migración SQL](supabase/migrations/20261119000000_catalog.sql)
+en el Editor SQL del proyecto para crear la tabla con los 63 productos. La migración permite las lecturas públicas
+de productos publicados. Edita los datos desde el editor de tablas de Supabase.
 
-```bash
-PREVIEW=netlify npx astro dev --port 4500
+La aplicación conserva la copia del catálogo incluida en el repositorio para arranques locales y fallos temporales
+de Supabase. Las fotos se sirven desde `public/catalogo/`. El carrito prepara una cotización por WhatsApp sin
+recopilar datos de entrega. Confirma el precio y el inventario por ese canal. El panel de Cloudflare corresponde
+al despliegue con D1.
+
+Para probar en PowerShell:
+
+```powershell
+$env:PREVIEW = 'netlify'
+npm.cmd run dev -- --port 4500
 ```
-
-Para quitarla cuando la tienda esté en Cloudflare: borrar `netlify.toml` y `src/preview/`, quitar el adaptador de Netlify de
-`astro.config.mjs` y desinstalarlo con `npm uninstall @astrojs/netlify`.
